@@ -12,6 +12,9 @@ import java.nio.charset.StandardCharsets.UTF_8
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.control.NoStackTrace
+import java.sql.Types
+import alpine.ast.Labeled
+import alpine.ast.Expression
 
 /** The evaluation of an Alpine program.
  *
@@ -82,7 +85,11 @@ final class Interpreter(
     Value.Builtin(n.value, Type.String)
 
   def visitRecord(n: ast.Record)(using context: Context): Value =
-    ???
+    val fields = n.fields.map(_.visit(this)(using context))
+    Value.Record(n.identifier, fields, Type.Record(
+      n.identifier, n.fields.map(
+        (x: Labeled[Expression]) => Type.Labeled(x.label, x.value.tpe))))
+
 
   def visitSelection(n: ast.Selection)(using context: Context): Value =
     n.qualification.visit(this) match
@@ -119,8 +126,8 @@ final class Interpreter(
     ???
 
   def visitParenthesizedExpression(n: ast.ParenthesizedExpression)(using context: Context): Value =
-    // TODO
-    ???
+    n.inner.visit(this)(using Context())
+    
 
   def visitAscribedExpression(n: ast.AscribedExpression)(using context: Context): Value =
     ???
