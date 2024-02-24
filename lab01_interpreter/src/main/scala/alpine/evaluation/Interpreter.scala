@@ -15,6 +15,7 @@ import scala.util.control.NoStackTrace
 import java.sql.Types
 import alpine.ast.Labeled
 import alpine.ast.Expression
+import alpine.ast.Typecast
 
 /** The evaluation of an Alpine program.
  *
@@ -130,8 +131,31 @@ final class Interpreter(
     
 
   def visitAscribedExpression(n: ast.AscribedExpression)(using context: Context): Value =
-    ???
+    val expressionValue = n.inner.visit(this)
+    val ascribedType = n.ascription
+    val changing_operation = n.operation
 
+    changing_operation match
+      // Widening
+      case Typecast.Widen =>
+        expressionValue
+
+      // Unconditional Narrowing
+      case Typecast.NarrowUnconditionally =>
+        if ascribedType.tpe.isSubtypeOf(expressionValue.dynamicType) then
+          Value.some(expressionValue)
+        else
+          throw Panic(s"expression of type '${expressionValue.dynamicType}' is not" +
+            s"a supertype of the ascribed type '${ascribedType.tpe}'")
+
+      // Safe Narrowing
+      case Typecast.Narrow =>
+        if ascribedType.tpe.isSubtypeOf(expressionValue.dynamicType) then
+          Value.some(expressionValue)
+        else
+          Value.none
+
+            
   def visitTypeIdentifier(n: ast.TypeIdentifier)(using context: Context): Value =
     unexpectedVisit(n)
 
