@@ -16,6 +16,8 @@ import java.sql.Types
 import alpine.ast.Labeled
 import alpine.ast.Expression
 import alpine.ast.Typecast
+import alpine.ast.Tree
+import alpine.symbols.Name
 
 /** The evaluation of an Alpine program.
  *
@@ -121,7 +123,8 @@ final class Interpreter(
     unexpectedVisit(n)
 
   def visitLet(n: ast.Let)(using context: Context): Value =
-    ???
+    val new_binding = n.binding.visit(this)(using context)
+    n.body.visit(this)(using context.defining(n.binding.nameDeclared, new_binding))
 
   def visitLambda(n: ast.Lambda)(using context: Context): Value =
     ???
@@ -131,27 +134,27 @@ final class Interpreter(
     
 
   def visitAscribedExpression(n: ast.AscribedExpression)(using context: Context): Value =
-    val expressionValue = n.inner.visit(this)
+    val value = n.inner.visit(this)
     val ascribedType = n.ascription
-    val changing_operation = n.operation
+    val operation = n.operation
 
-    changing_operation match
+    operation match
       // Widening
       case Typecast.Widen =>
-        expressionValue
+        value
 
       // Unconditional Narrowing
       case Typecast.NarrowUnconditionally =>
-        if ascribedType.tpe.isSubtypeOf(expressionValue.dynamicType) then
-          Value.some(expressionValue)
+        if ascribedType.tpe.isSubtypeOf(value.dynamicType) then
+          Value.some(value)
         else
-          throw Panic(s"expression of type '${expressionValue.dynamicType}' is not" +
+          throw Panic(s"expression of type '${value.dynamicType}' is not" +
             s"a supertype of the ascribed type '${ascribedType.tpe}'")
 
       // Safe Narrowing
       case Typecast.Narrow =>
-        if ascribedType.tpe.isSubtypeOf(expressionValue.dynamicType) then
-          Value.some(expressionValue)
+        if ascribedType.tpe.isSubtypeOf(value.dynamicType) then
+          Value.some(value)
         else
           Value.none
 
