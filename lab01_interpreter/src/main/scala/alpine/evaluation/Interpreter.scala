@@ -130,7 +130,7 @@ final class Interpreter(
     ???
 
   def visitParenthesizedExpression(n: ast.ParenthesizedExpression)(using context: Context): Value =
-    n.inner.visit(this)(using Context())
+    n.inner.visit(this)(using context)
     
 
   def visitAscribedExpression(n: ast.AscribedExpression)(using context: Context): Value =
