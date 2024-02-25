@@ -5,3 +5,7 @@
 .bsp
 project
 target
+lab01_interpreter/.metals/metals.lock.db
+lab01_interpreter/.metals/metals.log
+lab01_interpreter/.metals/metals.mv.db
+lab01_interpreter/.vscode/settings.json
