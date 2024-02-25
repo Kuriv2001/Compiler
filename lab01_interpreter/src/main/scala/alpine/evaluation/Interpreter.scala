@@ -18,6 +18,7 @@ import alpine.ast.Expression
 import alpine.ast.Typecast
 import alpine.ast.Tree
 import alpine.symbols.Name
+import alpine.evaluation.Value.Builtin
 
 /** The evaluation of an Alpine program.
  *
@@ -105,23 +106,22 @@ final class Interpreter(
         throw Panic(s"unexpected qualification of type '${q.dynamicType}'")
 
   def visitApplication(n: ast.Application)(using context: Context): Value =
-    val fct = n.function.visit(this)(using context) 
-    val args = n.arguments.map(_.visit(this)(using context))
-    call(fct, args)(using context)
-
-  def visitPrefixApplication(n: ast.PrefixApplication)(using context: Context): Value =
-    val fct = n.function.visit(this)(using context)
-    val args = n.argument.visit(this)(using context) +: Nil
-    call(fct, args)(using context)
-
-  def visitInfixApplication(n: ast.InfixApplication)(using context: Context): Value =
-    val fct = n.function.visit(this)(using context)
-    val args = n.lhs.visit(this)(using context) +: n.rhs.visit(this)(using context) +: Nil
-    call(fct, args)(using context)
-
-  def visitConditional(n: ast.Conditional)(using context: Context): Value =
     ???
 
+  def visitPrefixApplication(n: ast.PrefixApplication)(using context: Context): Value =
+    ???
+
+  def visitInfixApplication(n: ast.InfixApplication)(using context: Context): Value =
+    ???
+
+  def visitConditional(n: ast.Conditional)(using context: Context): Value =
+    n.condition.visit(this) match
+      case Value.Builtin(v : Boolean, dt) if dt.isSubtypeOf(Type.Bool) => 
+        if v then n.successCase.visit(this) else n.failureCase.visit(this)
+      case _ =>
+        throw Panic(s"condition should be of type: Type.Bool")
+      
+    
   def visitMatch(n: ast.Match)(using context: Context): Value =
     ???
 
@@ -226,15 +226,10 @@ final class Interpreter(
   private def call(f: Value, a: Seq[Value])(using context: Context): Value =
     f match
       case Value.Function(d, _) =>
-        //update the context with the new bindings
-        val new_context = context.pushing(a.zip(d.referredEntity(using context).map((v, p) => (p.label, v)))
-        d.body.visit(this)(using new_context)
+        ???
 
       case l: Value.Lambda =>
-        var new_context = context.pushing(l.captures)
-        //Alos push the arguments
-        new_context = new_context.pushing(a.zip(l.inputs).map((v, p) => (p.label, v)))
-        l.body.visit(this)(using new_context)
+        ???
 
       case Value.BuiltinFunction("exit", _) =>
         val Value.Builtin(status, _) = a.head : @unchecked
