@@ -106,13 +106,19 @@ final class Interpreter(
         throw Panic(s"unexpected qualification of type '${q.dynamicType}'")
 
   def visitApplication(n: ast.Application)(using context: Context): Value =
-    ???
+    val fct = n.function.visit(this)(using context) 
+    val args = n.arguments.map(_.visit(this)(using context))
+    call(fct, args)(using context)
 
   def visitPrefixApplication(n: ast.PrefixApplication)(using context: Context): Value =
-    ???
+    val fct = n.function.visit(this)(using context)
+    val args = n.argument.visit(this)(using context) +: Nil
+    call(fct, args)(using context)
 
   def visitInfixApplication(n: ast.InfixApplication)(using context: Context): Value =
-    ???
+    val fct = n.function.visit(this)(using context)
+    val args = n.lhs.visit(this)(using context) +: n.rhs.visit(this)(using context) +: Nil
+    call(fct, args)(using context)
 
   def visitConditional(n: ast.Conditional)(using context: Context): Value =
     n.condition.visit(this) match
