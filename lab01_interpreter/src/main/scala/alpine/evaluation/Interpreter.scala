@@ -89,7 +89,7 @@ final class Interpreter(
     Value.Builtin(n.value, Type.String)
 
   def visitRecord(n: ast.Record)(using context: Context): Value =
-    val fields = n.fields.map(_.visit(this)(using context))
+    val fields = n.fields.map(_.value.visit(this)(using context))
     Value.Record(n.identifier, fields, Type.Record(
       n.identifier, n.fields.map(
         (x: Labeled[Expression]) => Type.Labeled(x.label, x.value.tpe))))
@@ -135,7 +135,7 @@ final class Interpreter(
     unexpectedVisit(n)
 
   def visitLet(n: ast.Let)(using context: Context): Value =
-    val new_binding = n.binding.visit(this)(using context)
+    val new_binding = n.binding.initializer.get.visit(this)(using context)
     n.body.visit(this)(using context.defining(n.binding.nameDeclared, new_binding))
 
   def visitLambda(n: ast.Lambda)(using context: Context): Value =
