@@ -232,10 +232,15 @@ final class Interpreter(
   private def call(f: Value, a: Seq[Value])(using context: Context): Value =
     f match
       case Value.Function(d, _) =>
-        ???
+        val names = d.inputs.map(_.nameDeclared)
+        val new_frame = names.zip(a).toMap
+        d.body.visit(this)(using context.pushing(new_frame))
 
       case l: Value.Lambda =>
-        ???
+        val names = l.inputs.map(_.nameDeclared)
+        val new_frame = names.zip(a).toMap
+        val new_frame_with_captures = new_frame ++ l.captures
+        l.body.visit(this)(using context.pushing(new_frame_with_captures))
 
       case Value.BuiltinFunction("exit", _) =>
         val Value.Builtin(status, _) = a.head : @unchecked
