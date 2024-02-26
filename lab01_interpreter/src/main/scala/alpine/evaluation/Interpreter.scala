@@ -107,7 +107,7 @@ final class Interpreter(
 
   def visitApplication(n: ast.Application)(using context: Context): Value =
     val fct = n.function.visit(this)(using context) 
-    val args = n.arguments.map(_.visit(this)(using context))
+    val args = n.arguments.map(_.value.visit(this)(using context))
     call(fct, args)(using context)
 
   def visitPrefixApplication(n: ast.PrefixApplication)(using context: Context): Value =
