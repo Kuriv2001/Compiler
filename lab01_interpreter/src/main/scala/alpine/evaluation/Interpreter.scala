@@ -158,7 +158,7 @@ final class Interpreter(
       // Unconditional Narrowing
       case Typecast.NarrowUnconditionally =>
         if ascribedType.tpe.isSubtypeOf(value.dynamicType) then
-          Value.some(value)
+          value
         else
           throw Panic(s"expression of type '${value.dynamicType}' is not" +
             s"a supertype of the ascribed type '${ascribedType.tpe}'")
