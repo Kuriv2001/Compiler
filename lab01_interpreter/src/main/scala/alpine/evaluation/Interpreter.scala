@@ -19,6 +19,8 @@ import alpine.ast.Typecast
 import alpine.ast.Tree
 import alpine.symbols.Name
 import alpine.evaluation.Value.Builtin
+import alpine.ast.Binding
+import alpine.ast.ValuePattern
 
 /** The evaluation of an Alpine program.
  *
@@ -129,7 +131,12 @@ final class Interpreter(
       
     
   def visitMatch(n: ast.Match)(using context: Context): Value =
-    ???
+    val scrutinee = n.scrutinee.visit(this)(using context)
+    val cases = n.cases.map(_.pattern.visit(this)(using context))
+    val matched = n.cases.find(matches( scrutinee, _ )(using context))
+    matched match
+      case Some(bindings: Interpreter.Frame) => bindings.visit(this)(using context)
+      case None => throw Panic(s"no match found for the scrutinee")
 
   def visitMatchCase(n: ast.Match.Case)(using context: Context): Value =
     unexpectedVisit(n)
