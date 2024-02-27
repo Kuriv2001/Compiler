@@ -402,19 +402,14 @@ final class Interpreter(
   private def matchesBinding(
       scrutinee: Value, pattern: ast.Binding
   )(using context: Context): Option[Interpreter.Frame] =
-      /* matchesBinding matches a binding and returns a Frame with the bindings if any.
-      Be careful, the type of the binding must match as well. */
-
-
-    // pattern.initializer match
-    //   case Some(i) =>
-    //     if scrutinee == i.visit(this)(using context) &&
-    //         scrutinee.dynamicType == pattern.ascription.get then
-    //       Some(Map(pattern.nameDeclared -> scrutinee))
-    //     else
-    //       None
-    //   case None =>
-    //     None
+    pattern.initializer match
+      case Some(i) =>
+        if scrutinee.dynamicType == pattern.ascription.get.tpe then
+          Some(Map(pattern.nameDeclared -> scrutinee))
+        else
+          None
+      case None =>
+        None
 
 
 end Interpreter
