@@ -22,6 +22,7 @@ import alpine.evaluation.Value.Builtin
 import alpine.ast.Binding
 import alpine.ast.ValuePattern
 import alpine.ast.Match.Case
+import alpine.driver.typeCheck
 
 /** The evaluation of an Alpine program.
  *
@@ -402,15 +403,14 @@ final class Interpreter(
   private def matchesBinding(
       scrutinee: Value, pattern: ast.Binding
   )(using context: Context): Option[Interpreter.Frame] =
-    pattern.initializer match
-      case Some(i) =>
-        if scrutinee.dynamicType == pattern.ascription.get.tpe then
+    pattern.ascription match
+      case Some(a) =>
+        if scrutinee.dynamicType.isSubtypeOf(a.tpe) then
           Some(Map(pattern.nameDeclared -> scrutinee))
         else
           None
       case None =>
         None
-
 
 end Interpreter
 
