@@ -375,13 +375,17 @@ final class Interpreter(
   private def matchesWildcard(
       scrutinee: Value, pattern: ast.Wildcard
   )(using context: Context): Option[Interpreter.Frame] =
-    ???
+    Some(Map())
 
   /** Returns a map from binding in `pattern` to its value iff `scrutinee` matches `pattern`.  */
   private def matchesValue(
       scrutinee: Value, pattern: ast.ValuePattern
   )(using context: Context): Option[Interpreter.Frame] =
-    ???
+    if scrutinee == pattern.value.visit(this)(using context) then
+      Some(Map())
+    else
+      None
+    
 
   /** Returns a map from binding in `pattern` to its value iff `scrutinee` matches `pattern`.  */
   private def matchesRecord(
@@ -398,7 +402,20 @@ final class Interpreter(
   private def matchesBinding(
       scrutinee: Value, pattern: ast.Binding
   )(using context: Context): Option[Interpreter.Frame] =
-    ???
+      /* matchesBinding matches a binding and returns a Frame with the bindings if any.
+      Be careful, the type of the binding must match as well. */
+
+
+    // pattern.initializer match
+    //   case Some(i) =>
+    //     if scrutinee == i.visit(this)(using context) &&
+    //         scrutinee.dynamicType == pattern.ascription.get then
+    //       Some(Map(pattern.nameDeclared -> scrutinee))
+    //     else
+    //       None
+    //   case None =>
+    //     None
+
 
 end Interpreter
 
