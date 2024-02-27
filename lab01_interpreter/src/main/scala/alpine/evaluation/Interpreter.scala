@@ -21,6 +21,7 @@ import alpine.symbols.Name
 import alpine.evaluation.Value.Builtin
 import alpine.ast.Binding
 import alpine.ast.ValuePattern
+import alpine.ast.Match.Case
 
 /** The evaluation of an Alpine program.
  *
@@ -129,14 +130,25 @@ final class Interpreter(
       case _ =>
         throw Panic(s"condition should be of type: Type.Bool")
       
-    
+
+
+  // TU ES ENTRAIN DE FAIRE CA!!!!!!!!!!!
   def visitMatch(n: ast.Match)(using context: Context): Value =
-    val scrutinee = n.scrutinee.visit(this)(using context)
-    val cases = n.cases.map(_.pattern.visit(this)(using context))
-    val matched = n.cases.find(matches( scrutinee, _ )(using context))
+    val scrutinee = n.scrutinee.visit(this)
+    val matchedPatterns = n.cases.map(x => matches(scrutinee, x.pattern))
+
+    val cases = n.cases.map(_.body).zip(matchedPatterns)
+
+    val matched = cases.find((_ , f: Option[Interpreter.Frame]) => f match
+      case None => false
+      case Some(v) => true
+    )
+
     matched match
-      case Some(bindings: Interpreter.Frame) => bindings.visit(this)(using context)
+      case Some(b: Expression , f: Option[Interpreter.Frame]) => b.visit(this)(using context.pushing(f.get))
       case None => throw Panic(s"no match found for the scrutinee")
+
+  
 
   def visitMatchCase(n: ast.Match.Case)(using context: Context): Value =
     unexpectedVisit(n)
