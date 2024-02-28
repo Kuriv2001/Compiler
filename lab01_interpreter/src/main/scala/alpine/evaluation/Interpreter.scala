@@ -159,7 +159,7 @@ final class Interpreter(
     n.body.visit(this)(using context.defining(n.binding.nameDeclared, new_binding))
 
   def visitLambda(n: ast.Lambda)(using context: Context): Value =
-    ???
+    Value.Lambda(n.body, n.inputs, context.flattened, n.tpe)
 
   def visitParenthesizedExpression(n: ast.ParenthesizedExpression)(using context: Context): Value =
     n.inner.visit(this)(using context)
