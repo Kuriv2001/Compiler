@@ -23,6 +23,7 @@ import alpine.ast.Binding
 import alpine.ast.ValuePattern
 import alpine.ast.Match.Case
 import alpine.driver.typeCheck
+import alpine.evaluation.Value.Poison.dynamicType
 
 /** The evaluation of an Alpine program.
  *
@@ -395,7 +396,19 @@ final class Interpreter(
     import Interpreter.Frame
     scrutinee match
       case s: Value.Record =>
-        ???
+        Type.Record.from(pattern.tpe) match
+          case Some(t) if t.structurallyMatches(s.dynamicType) =>
+            val p_types = pattern.fields.map(_.value.tpe)
+            val t_to_t = s.fields.zip(p_types)
+
+            val res = t_to_t.map((v, t) => v.dynamicType.isSubtypeOf(t))
+
+            if !res.contains(false) then 
+              Some(Map(pattern.nameDeclared -> scrutinee))
+            else
+              None
+          case _ => None
+        
       case _ =>
         None
 
