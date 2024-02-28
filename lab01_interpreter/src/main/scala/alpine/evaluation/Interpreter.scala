@@ -404,7 +404,8 @@ final class Interpreter(
             val res = t_to_t.map((v, t) => v.dynamicType.isSubtypeOf(t))
 
             if !res.contains(false) then 
-              Some(Map(pattern.nameDeclared -> scrutinee))
+              t_to_t.foldLeft(Map())((acc, (v, t)) => acc ++ Map(t.nameDeclared))
+
             else
               None
           case _ => None
