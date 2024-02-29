@@ -132,9 +132,7 @@ final class Interpreter(
       case _ =>
         throw Panic(s"condition should be of type: Type.Bool")
       
-
-
-  // TU ES ENTRAIN DE FAIRE CA!!!!!!!!!!!
+    
   def visitMatch(n: ast.Match)(using context: Context): Value =
     val scrutinee = n.scrutinee.visit(this)
     val matchedPatterns = n.cases.map(x => matches(scrutinee, x.pattern))
@@ -149,7 +147,6 @@ final class Interpreter(
     matched match
       case Some(b: Expression , f: Option[Interpreter.Frame]) => b.visit(this)(using context.pushing(f.get))
       case None => throw Panic(s"no match found for the scrutinee")
-
   
 
   def visitMatchCase(n: ast.Match.Case)(using context: Context): Value =
