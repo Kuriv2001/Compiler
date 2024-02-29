@@ -1,3 +1,20 @@
+file://<WORKSPACE>/src/main/scala/alpine/evaluation/Interpreter.scala
+### java.lang.AssertionError: assertion failed: denotation class Object invalid in run 3. ValidFor: Period(1..2, run = 4)
+
+occurred in the presentation compiler.
+
+presentation compiler configuration:
+Scala version: 3.3.1
+Classpath:
+<WORKSPACE>/.bloop/lab01_interpreter/bloop-bsp-clients-classes/classes-Metals-gZlKdcy9QzOTCerFA2sh-w== [exists ], <HOME>/.cache/bloop/semanticdb/com.sourcegraph.semanticdb-javac.0.9.9/semanticdb-javac-0.9.9.jar [exists ], <WORKSPACE>/lib/alpine.jar [exists ], <HOME>/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.3.1/scala3-library_3-3.3.1.jar [exists ], <HOME>/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.10/scala-library-2.13.10.jar [exists ]
+Options:
+-Xsemanticdb -sourceroot <WORKSPACE>
+
+
+action parameters:
+uri: file://<WORKSPACE>/src/main/scala/alpine/evaluation/Interpreter.scala
+text:
+```scala
 package alpine
 package evaluation
 
@@ -398,13 +415,18 @@ final class Interpreter(
       case s: Value.Record =>
         Type.Record.from(pattern.tpe) match
           case Some(t) if t.structurallyMatches(s.dynamicType) =>
-            val res = s.fields.zip(pattern.fields).map((v, lp) => matches(v, lp.value))
+            val p_types = pattern.fields.map(_.value.tpe)
+            val t_to_t = s.fields.zip(p_types)
 
-            if !res.contains(None) then 
-              Some(res.foldLeft(Map(): Frame)((acc, m) => acc ++ m.get))
+            val res = t_to_t.map((v, t) => v.dynamicType.isSubtypeOf(t))
+
+            if !res.contains(false) then 
+              t_to_t.foldLeft(Map())((acc, (v, t)) => acc ++ Map(t.nameDeclared))
+
             else
               None
-          case _ => None   
+          case _ => None
+        
       case _ =>
         None
 
@@ -419,10 +441,8 @@ final class Interpreter(
         else
           None
       case None =>
-        if scrutinee.dynamicType == pattern.tpe then 
-          Some(Map(pattern.nameDeclared->scrutinee))
-        else
-          None
+        if scrutinee.
+        None
 
 end Interpreter
 
@@ -471,3 +491,76 @@ object Interpreter:
   private final class Exit(val status: Int) extends Exception with NoStackTrace
 
 end Interpreter
+```
+
+
+
+#### Error stacktrace:
+
+```
+scala.runtime.Scala3RunTime$.assertFailed(Scala3RunTime.scala:8)
+	dotty.tools.dotc.core.Denotations$SingleDenotation.updateValidity(Denotations.scala:717)
+	dotty.tools.dotc.core.Denotations$SingleDenotation.bringForward(Denotations.scala:742)
+	dotty.tools.dotc.core.Denotations$SingleDenotation.toNewRun$1(Denotations.scala:799)
+	dotty.tools.dotc.core.Denotations$SingleDenotation.current(Denotations.scala:870)
+	dotty.tools.dotc.core.Symbols$Symbol.recomputeDenot(Symbols.scala:120)
+	dotty.tools.dotc.core.Symbols$Symbol.computeDenot(Symbols.scala:114)
+	dotty.tools.dotc.core.Symbols$Symbol.denot(Symbols.scala:107)
+	dotty.tools.dotc.core.Symbols$ClassSymbol.classDenot(Symbols.scala:481)
+	dotty.tools.dotc.core.Symbols$.toClassDenot(Symbols.scala:497)
+	dotty.tools.dotc.core.SymDenotations$ClassDenotation.computeMemberNames$$anonfun$1(SymDenotations.scala:2324)
+	scala.runtime.function.JProcedure1.apply(JProcedure1.java:15)
+	scala.runtime.function.JProcedure1.apply(JProcedure1.java:10)
+	scala.collection.immutable.List.foreach(List.scala:333)
+	dotty.tools.dotc.core.SymDenotations$ClassDenotation.computeMemberNames(SymDenotations.scala:2325)
+	dotty.tools.dotc.core.SymDenotations$MemberNamesImpl.apply(SymDenotations.scala:2917)
+	dotty.tools.dotc.core.SymDenotations$ClassDenotation.memberNames(SymDenotations.scala:2314)
+	dotty.tools.dotc.core.Types$Type.memberNames(Types.scala:903)
+	dotty.tools.dotc.core.Types$Type.memberDenots(Types.scala:920)
+	dotty.tools.dotc.core.Types$Type.allMembers(Types.scala:1015)
+	scala.meta.internal.pc.PcCollector$$anon$5.applyOrElse(PcCollector.scala:577)
+	scala.meta.internal.pc.PcCollector$$anon$5.applyOrElse(PcCollector.scala:563)
+	scala.collection.immutable.List.collect(List.scala:267)
+	scala.meta.internal.pc.PcCollector.collectNamesWithParent$1(PcCollector.scala:588)
+	scala.meta.internal.pc.PcCollector.$anonfun$19(PcCollector.scala:607)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:654)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse$$anonfun$1(PcCollector.scala:656)
+	scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	scala.collection.immutable.List.foldLeft(List.scala:79)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:656)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse$$anonfun$1(PcCollector.scala:656)
+	scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	scala.collection.immutable.List.foldLeft(List.scala:79)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:656)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse$$anonfun$1(PcCollector.scala:656)
+	scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	scala.collection.immutable.List.foldLeft(List.scala:79)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:656)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse$$anonfun$1(PcCollector.scala:656)
+	scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	scala.collection.immutable.List.foldLeft(List.scala:79)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:656)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse$$anonfun$1(PcCollector.scala:656)
+	scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	scala.collection.immutable.List.foldLeft(List.scala:79)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:656)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse$$anonfun$1(PcCollector.scala:656)
+	scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	scala.collection.immutable.List.foldLeft(List.scala:79)
+	scala.meta.internal.pc.PcCollector$WithParentTraverser.traverse(PcCollector.scala:656)
+	scala.meta.internal.pc.PcCollector$DeepFolderWithParent.apply(PcCollector.scala:662)
+	scala.meta.internal.pc.PcCollector.traverseSought(PcCollector.scala:608)
+	scala.meta.internal.pc.PcCollector.resultAllOccurences(PcCollector.scala:355)
+	scala.meta.internal.pc.PcCollector.result(PcCollector.scala:349)
+	scala.meta.internal.pc.PcSemanticTokensProvider.provide(PcSemanticTokensProvider.scala:90)
+	scala.meta.internal.pc.ScalaPresentationCompiler.semanticTokens$$anonfun$1(ScalaPresentationCompiler.scala:109)
+```
+#### Short summary: 
+
+java.lang.AssertionError: assertion failed: denotation class Object invalid in run 3. ValidFor: Period(1..2, run = 4)
