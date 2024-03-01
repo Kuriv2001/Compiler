@@ -108,6 +108,7 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
+    //TODO: CHECK
     val label = expect(K.Label)
     val name = expect(K.Identifier)
     peek match
