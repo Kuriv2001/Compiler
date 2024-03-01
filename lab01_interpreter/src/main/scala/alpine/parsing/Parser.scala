@@ -7,7 +7,6 @@ import alpine.util.FatalError
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.SeqView.Reverse
-//import java.lang.reflect.Parameter
 
 class Parser(val source: SourceFile):
 
@@ -108,15 +107,28 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
-    //TODO: CHECK
-    val label = expect(K.Label)
-    val name = expect(K.Identifier)
     peek match
-      case Some(Token(K.Colon, _)) =>
-        val type_exp = tpe()
-        Parameter(Some(label.toString), name.toString, Some(type_exp), label.site.extendedTo(type_exp.site.end))
+      case label @ Some(Token(K.Label, _)) =>
+        val name = identifier()
+        peek match
+          case Some(Token(K.Colon, _)) =>
+            val type_exp = tpe()
+            Parameter(Some(label.toString), name.value, Some(type_exp), label.value.site.extendedTo(type_exp.site.end))
+          case _ =>
+            Parameter(Some(label.toString), name.value, None, label.value.site.extendedTo(name.site.end))
+
+      case unlabeled @ Some(Token(K.Underscore, _)) =>
+        val name = identifier()
+        peek match
+          case Some(Token(K.Colon, _)) =>
+            val type_exp = tpe()
+            Parameter(None, name.value, Some(type_exp), unlabeled.value.site.extendedTo(type_exp.site.end))
+          case _ =>
+            Parameter(None, name.value, None, unlabeled.value.site.extendedTo(name.site.end))
+
       case _ =>
-        Parameter(Some(label.toString), name.toString, None, label.site.extendedTo(name.site.end))
+        // I don't know what to return here, this is probably false
+        Parameter(None, missingName, None, emptySiteAtLastBoundary)
         
 
   /** Parses and returns a type declaration. */
