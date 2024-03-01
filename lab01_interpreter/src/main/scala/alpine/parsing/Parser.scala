@@ -56,12 +56,38 @@ class Parser(val source: SourceFile):
         recover(ExpectedTree("top-level declaration", emptySiteAtLastBoundary), ErrorTree.apply)
 
   /** Parses and returns a binding declaration. */
-  private[parsing] def binding(initializerIsExpected: Boolean = true): Binding =
-  ???
+  private[parsing] def binding(initializerIsExpected: Boolean = true): Binding = //TODO CHECK
+    val let_exp = expect(K.Let)
+    val name = expect(K.Identifier)
+    peek match
+      case Some(Token(K.Colon, _)) =>
+        val type_exp = tpe()
+        val eq_exp = expect(K.Eq)
+        val initializer = expression()
+        Binding(
+          name.toString,
+          Some(type_exp),
+          Some(initializer),
+          let_exp.site.extendedToCover(initializer.site)
+        )
+      case Some(Token(K.Eq, _)) =>
+        val type_exp = None
+        val eq_exp = expect(K.Eq)
+        val initializer = expression()
+        Binding(
+          name.toString,
+          type_exp,
+          Some(initializer),
+          let_exp.site.extendedToCover(initializer.site)
+        )
+      case _ =>
+        report(SyntaxError("expected ':' or '='", name.site.extendedTo(lastBoundary)))
+        return Binding(name.toString, None, None, let_exp.site.extendedTo(lastBoundary)) //TODO not correct, but return what then?
 
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
     ???
+
 
   /** Parses and returns the identifier of a function. */
   private def functionIdentifier(): String =
@@ -74,7 +100,9 @@ class Parser(val source: SourceFile):
         missingName
 
   /** Parses and returns a list of parameter declarations in parentheses. */
-  private[parsing] def valueParameterList(): List[Parameter] =
+  private[parsing] def valueParameterList(): List[Parameter] = 
+    // val inParens = inParentheses(() => commaSeparatedList(K.RParen.matches, parameter))
+    // inParens.collect({ case p: Parameter => p })
     ???
 
   /** Parses and returns a parameter declaration. */
@@ -82,8 +110,12 @@ class Parser(val source: SourceFile):
     ???
 
   /** Parses and returns a type declaration. */
-  private[parsing] def typeDeclaration(): TypeDeclaration =
-    ???
+  private[parsing] def typeDeclaration(): TypeDeclaration = //TODO CHECK need to add generic type parameters?
+    val type_exp = expect(K.Type)
+    val name = expect(K.Identifier)
+    val type_eq = expect(K.Eq)
+    val type_body = tpe()
+    TypeDeclaration(name.toString, List(), type_body, type_exp.site.extendedToCover(type_body.site)) 
 
   /** Parses and returns a list of parameter declarations in angle brackets. */
   //--- This is intentionally left in the handout /*+++ +++*/
@@ -99,8 +131,8 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns an infix expression. */
   private[parsing] def infixExpression(precedence: Int = ast.OperatorPrecedence.min): Expression =
-
     ???
+
 
   /** Parses and returns an expression with an optional ascription. */
   private[parsing] def ascribed(): Expression =
@@ -176,14 +208,22 @@ class Parser(val source: SourceFile):
   /** Parses and returns a term-level record expression. */
   private def recordExpression(): Record =
     ???
+    
 
   /** Parses and returns the fields of a term-level record expression. */
   private def recordExpressionFields(): List[Labeled[Expression]] =
     ???
 
   /** Parses and returns a conditional expression. */
-  private[parsing] def conditional(): Expression =
-    ???
+  private[parsing] def conditional(): Expression = //TODO CHECK
+    // Needs to become IfExpression := 'if' Expression 'then' Expression 'else' Expression
+    val if_exp = expect(K.If)
+    val condition = expression()
+    val then_exp = expect(K.Then)
+    val success_case = expression()
+    val else_exp = expect(K.Else)
+    val failure_case = expression()
+    Conditional(condition, success_case, failure_case, if_exp.site.extendedToCover(failure_case.site))
 
   /** Parses and returns a match expression. */
   private[parsing] def mtch(): Expression =
@@ -328,8 +368,9 @@ class Parser(val source: SourceFile):
         recover(ExpectedTree("type expression", emptySiteAtLastBoundary), ErrorTree.apply)
 
   /** Parses and returns a type identifier. */
-  private def typeIdentifier(): Type =
-    ???
+  private def typeIdentifier(): Type = //TODO CHECK
+    val identf = expect(K.Identifier)
+    TypeIdentifier(identf.toString, identf.site)
 
   /** Parses and returns a list of type arguments. */
   private def typeArguments(): List[Labeled[Type]] =
@@ -338,7 +379,6 @@ class Parser(val source: SourceFile):
   /** Parses and returns a type-level record expressions. */
   private[parsing] def recordType(): RecordType =
     ???
-
   /** Parses and returns the fields of a type-level record expression. */
   private def recordTypeFields(): List[Labeled[Type]] =
     ???
@@ -443,8 +483,12 @@ class Parser(val source: SourceFile):
           loop(nextPartialResult)
     loop(List())
 
-  /** Parses and returns `element` surrounded by a pair of parentheses. */
+  /** Parses and returns `element` surrounded by a pair of parentheses. */ 
   private[parsing] def inParentheses[T](element: () => T): T =
+    // val left = expect(K.LParen)
+    // val contents = recovering(K.RParen.matches, element)
+    // val right = expect(K.RParen)
+    // contents
     ???
 
   /** Parses and returns `element` surrounded by a pair of braces. */

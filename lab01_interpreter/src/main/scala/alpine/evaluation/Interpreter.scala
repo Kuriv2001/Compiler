@@ -22,7 +22,7 @@ import alpine.evaluation.Value.Builtin
 import alpine.ast.Binding
 import alpine.ast.ValuePattern
 import alpine.ast.Match.Case
-import alpine.driver.typeCheck
+//import alpine.driver.typeCheck TODO Not found
 import alpine.evaluation.Value.Poison.dynamicType
 
 /** The evaluation of an Alpine program.
