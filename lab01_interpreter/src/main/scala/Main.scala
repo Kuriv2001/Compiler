@@ -22,6 +22,8 @@ private def parseCommandLineArguments(args: Seq[String]): (Action, driver.Config
     else if s.startsWith("-") then
       if s.drop(1) == "i" then
         action = Action.Interpret
+      else if s.drop(1) == "p" then
+        action = Action.Parse
     else
       inputPaths = inputPaths.prepended(s.toString)
 
@@ -50,10 +52,5 @@ private def withConfiguration[T](
   val (a, c) = parseCommandLineArguments(args)
   a match
     case Action.Parse =>
-      withConfiguration(c, driver.parse)
-    case Action.TypeCheck =>
-      withConfiguration(c, driver.typeCheck)
-    case Action.Interpret =>
-      withConfiguration(c, driver.interpret)
-    case Action.Compile =>
-      withConfiguration(c, driver.typeCheck)
+      val t = (withConfiguration(c, driver.parse))
+      println(t.get.declarations.toList)
