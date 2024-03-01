@@ -57,7 +57,7 @@ class Parser(val source: SourceFile):
         recover(ExpectedTree("top-level declaration", emptySiteAtLastBoundary), ErrorTree.apply)
 
   /** Parses and returns a binding declaration. */
-  private[parsing] def binding(initializerIsExpected: Boolean = true): Binding = //TODO CHECK
+  private[parsing] def binding(initializerIsExpected: Boolean = true): Binding = //TODO GREG
     val let_exp = expect(K.Let)
     val name = expect(K.Identifier)
     peek match
@@ -120,7 +120,7 @@ class Parser(val source: SourceFile):
         
 
   /** Parses and returns a type declaration. */
-  private[parsing] def typeDeclaration(): TypeDeclaration = //TODO CHECK need to add generic type parameters?
+  private[parsing] def typeDeclaration(): TypeDeclaration = //TODO GREG need to add generic type parameters?
     val type_exp = expect(K.Type)
     val name = expect(K.Identifier)
     val type_eq = expect(K.Eq)
@@ -146,8 +146,15 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns an expression with an optional ascription. */
   private[parsing] def ascribed(): Expression =
-    ???
-
+    val exp = prefixExpression()
+    peek match
+      case Some(Token(K.At | K.AtQuery | K.AtBang,s)) =>
+        val token_casted = typecast()
+        val type_t = tpe()
+        AscribedExpression(exp, token_casted, type_t, exp.site.extendedToCover(type_t.site))
+      case _ =>
+        exp
+    
   /** Parses and returns a prefix application. */
   private[parsing] def prefixExpression(): Expression =
     ???
@@ -216,16 +223,25 @@ class Parser(val source: SourceFile):
     
 
   /** Parses and returns a term-level record expression. */
-  private def recordExpression(): Record =
-    ???
+  private def recordExpression(): Record = //TODO GREG
+    val label_got = expect(K.Label)
+    val identf_got = expect(K.Identifier)
+    peek match
+      case Some(Token(K.LBrace, _)) =>
+        val fields = recordExpressionFields()
+        Record(identf_got.toString, fields, label_got.site.extendedToCover(fields.last.site))
+      case _ =>
+        Record(identf_got.toString, List(), label_got.site.extendedToCover(identf_got.site)) //TODO GREG, really empty list?
+    
     
 
   /** Parses and returns the fields of a term-level record expression. */
   private def recordExpressionFields(): List[Labeled[Expression]] =
-    ???
+    parenthesizedLabeledList(() => expression()) //TODO GREG, really this simple?
+    
 
   /** Parses and returns a conditional expression. */
-  private[parsing] def conditional(): Expression = //TODO CHECK
+  private[parsing] def conditional(): Expression = //TODO GREG
     // Needs to become IfExpression := 'if' Expression 'then' Expression 'else' Expression
     val if_exp = expect(K.If)
     val condition = expression()
@@ -378,7 +394,7 @@ class Parser(val source: SourceFile):
         recover(ExpectedTree("type expression", emptySiteAtLastBoundary), ErrorTree.apply)
 
   /** Parses and returns a type identifier. */
-  private def typeIdentifier(): Type = //TODO CHECK
+  private def typeIdentifier(): Type = //TODO GREG
     val identf = expect(K.Identifier)
     TypeIdentifier(identf.toString, identf.site)
 
