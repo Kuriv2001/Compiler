@@ -7,6 +7,7 @@ import alpine.util.FatalError
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.SeqView.Reverse
+//import java.lang.reflect.Parameter
 
 class Parser(val source: SourceFile):
 
@@ -107,7 +108,15 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
-    ???
+    val label = expect(K.Label)
+    val name = expect(K.Identifier)
+    peek match
+      case Some(Token(K.Colon, _)) =>
+        val type_exp = tpe()
+        Parameter(Some(label.toString), name.toString, Some(type_exp), label.site.extendedTo(type_exp.site.end))
+      case _ =>
+        Parameter(Some(label.toString), name.toString, None, label.site.extendedTo(name.site.end))
+        
 
   /** Parses and returns a type declaration. */
   private[parsing] def typeDeclaration(): TypeDeclaration = //TODO CHECK need to add generic type parameters?
