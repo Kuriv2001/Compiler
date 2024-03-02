@@ -109,26 +109,34 @@ class Parser(val source: SourceFile):
   private[parsing] def parameter(): Declaration =
     peek match
       case label @ Some(Token(K.Label, _)) =>
-        val name = identifier()
-        peek match
-          case Some(Token(K.Colon, _)) =>
-            val type_exp = tpe()
-            Parameter(Some(label.toString), name.value, Some(type_exp), label.value.site.extendedTo(type_exp.site.end))
-          case _ =>
-            Parameter(Some(label.toString), name.value, None, label.value.site.extendedTo(name.site.end))
+        val label_token =
+          if (label.value._1.isKeyword)
+            expect(label.value._1)
+          else
+            identifier()
 
-      case unlabeled @ Some(Token(K.Underscore, _)) =>
         val name = identifier()
+
         peek match
           case Some(Token(K.Colon, _)) =>
             val type_exp = tpe()
-            Parameter(None, name.value, Some(type_exp), unlabeled.value.site.extendedTo(type_exp.site.end))
+            Parameter(Some(label_token.toString), name.value, Some(type_exp), label_token.site.extendedTo(type_exp.site.end))
           case _ =>
-            Parameter(None, name.value, None, unlabeled.value.site.extendedTo(name.site.end))
+            Parameter(Some(label.toString), name.value, None, label_token.site.extendedTo(name.site.end))
+
+      case Some(Token(K.Underscore, _)) =>
+        val unlabeled = expect(K.Underscore)
+        val name = identifier()
+
+        peek match
+          case Some(Token(K.Colon, _)) =>
+            val type_exp = tpe()
+            Parameter(None, name.value, Some(type_exp), unlabeled.site.extendedTo(type_exp.site.end))
+          case _ =>
+            Parameter(None, name.value, None, unlabeled.site.extendedTo(name.site.end))
 
       case _ =>
-        // I don't know what to return here, this is probably false
-        Parameter(None, missingName, None, emptySiteAtLastBoundary)
+        recover(ExpectedTree("parameter", emptySiteAtLastBoundary), ErrorTree.apply)
         
 
   /** Parses and returns a type declaration. */
@@ -173,7 +181,24 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a compound expression. */
   private[parsing] def compoundExpression(): Expression =
+    /*
+    val primary = primaryExpression()
+
+    peek match
+      case Some(Token(K.Dot, _)) =>
+        peek match
+          case Some(Token(K.Integer, _)) =>
+
+          case Some(Token)
+        
+        
+      case Some(Token(K.LParen, _)) =>
+        primary
+      case _ =>
+        primary
+    */
     ???
+
 
   /** Parses and returns a term-level primary exression.
    *
@@ -391,7 +416,16 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a type-level expression. */
   private[parsing] def tpe(): Type =
-  ???
+    val first_primary_type = primaryType()
+
+    peek match
+      case Some(Token(K.Operator, _)) =>
+        val operator = operatorIdentifier()
+        val second_primary_type = primaryType()
+        Sum(List(first_primary_type, second_primary_type), first_primary_type.site.extendedTo(second_primary_type.site.end))
+      case _ =>
+        Sum(List(first_primary_type), first_primary_type.site.extendedTo(first_primary_type.site.end))
+    
 
   /** Parses and returns a type-level primary exression. */
   private def primaryType(): Type =
