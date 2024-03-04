@@ -86,8 +86,30 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
-    ???
+    val fun = expect(K.Fun)
+    val identifier = expect(K.Identifier)
+    expect(K.LParen)
+    
+    val parameters = peek match
+      case Some(Token(K.RParen, _)) => valueParameterList()
+      case _ => List()
 
+    expect(K.RParen)
+
+    val funType = peek match
+      case Some(Token(K.Arrow, _)) => 
+        expect(K.Arrow)
+        Some(tpe())
+      case _ => None
+
+    expect(K.LBrace)
+    val expression = infixExpression()
+    val lastToken = expect(K.RBrace)
+
+    new Function(identifier.toString, parameters, List(), funType, expression, fun.site.extendedToCover(lastToken.site))
+
+    
+    
 
   /** Parses and returns the identifier of a function. */
   private def functionIdentifier(): String =
