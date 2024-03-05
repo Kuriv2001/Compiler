@@ -88,13 +88,13 @@ class Parser(val source: SourceFile):
   private[parsing] def function(): Function =
     val fun = expect(K.Fun)
     val identifier = expect(K.Identifier)
-    expect(K.LParen)
-    
-    val parameters = peek match
-      case Some(Token(K.RParen, _)) => valueParameterList()
-      case _ => List()
 
-    expect(K.RParen)
+    val parameters = valueParameterList()
+    // expect(K.LParen)
+    // val parameters = peek match
+    //   case Some(Token(K.RParen, _)) => valueParameterList()
+    //   case _ => List()
+    // expect(K.RParen)
 
     val funType = peek match
       case Some(Token(K.Arrow, _)) => 
@@ -123,9 +123,9 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a list of parameter declarations in parentheses. */
   private[parsing] def valueParameterList(): List[Parameter] = 
-    // val inParens = inParentheses(() => commaSeparatedList(K.RParen.matches, parameter))
-    // inParens.collect({ case p: Parameter => p })
-    ???
+    val inParens = inParentheses(() => commaSeparatedList(K.RParen.matches, parameter))
+    inParens.collect({ case p: Parameter => p })
+    
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
@@ -579,19 +579,24 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns `element` surrounded by a pair of parentheses. */ 
   private[parsing] def inParentheses[T](element: () => T): T =
-    // val left = expect(K.LParen)
-    // val contents = recovering(K.RParen.matches, element)
-    // val right = expect(K.RParen)
-    // contents
-    ???
-
+    val left = expect(K.LParen)
+    val contents = recovering(K.RParen.matches, element)
+    val right = expect(K.RParen)
+    contents
+    
   /** Parses and returns `element` surrounded by a pair of braces. */
   private[parsing] def inBraces[T](element: () => T): T =
-    ???
+    val left = expect(K.LBrace)
+    val contents = recovering(K.RBrace.matches, element)
+    val right = expect(K.RBrace)
+    contents
 
   /** Parses and returns `element` surrounded by angle brackets. */
   private[parsing] def inAngles[T](element: () => T): T =
-    ???
+    val left = expect(K.LAngle)
+    val contents = recovering(K.RAngle.matches, element)
+    val right = expect(K.RAngle)
+    contents
 
   /** Parses and returns `element` surrounded by a `left` and `right`. */
   private[parsing] def delimited[T](left: Token.Kind, right: Token.Kind, element: () => T): T =
