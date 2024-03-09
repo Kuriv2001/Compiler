@@ -7,6 +7,7 @@ import alpine.util.FatalError
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.SeqView.Reverse
+import scala.compiletime.ops.double
 
 class Parser(val source: SourceFile):
 
@@ -57,8 +58,9 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a binding declaration. */
   private[parsing] def binding(initializerIsExpected: Boolean = true): Binding = //TODO GREG
+  /*
     val let_exp = expect(K.Let)
-    val name = expect(K.Identifier)
+    val name = identifier()
     peek match
       case Some(Token(K.Colon, _)) =>
         val type_exp = tpe()
@@ -83,6 +85,43 @@ class Parser(val source: SourceFile):
       case _ =>
         report(SyntaxError("expected ':' or '='", name.site.extendedTo(lastBoundary)))
         return Binding(name.toString, None, None, let_exp.site.extendedTo(lastBoundary)) //TODO not correct, but return what then?
+  */
+    val letTok = expect(K.Let)
+    val i = identifier()
+
+    if initializerIsExpected then
+      peek match
+        case Some(Token(K.Colon, _)) =>
+          expect(K.Colon)
+          val ascriptionType = tpe()
+
+          if take(K.Eq) == None then
+            recover(ExpectedTokenError(K.Eq, emptySiteAtLastBoundary), ErrorTree.apply)
+
+          val initializer = expression()
+          Binding(i.value, Some(ascriptionType), Some(initializer), letTok.site.extendedTo(initializer.site.end))
+
+        case Some(Token(K.Eq, _)) =>
+          expect(K.Eq)
+          val initializer = expression()
+          Binding(i.value, None, Some(initializer), letTok.site.extendedTo(initializer.site.end))
+
+        case _ =>
+          recover(ExpectedTree("':' or '='", emptySiteAtLastBoundary), ErrorTree.apply)
+          Binding(i.value, None, None, letTok.site.extendedTo(i.site.end)) //TODO Antoine: False but what to return then?
+    
+    else
+      peek match
+        case Some(Token(K.Colon, _)) =>
+          expect(K.Colon)
+          val ascriptionType = tpe()
+          Binding(i.value, Some(ascriptionType), None, letTok.site.extendedTo(ascriptionType.site.end))
+
+        case _ =>
+          Binding(i.value, None, None, letTok.site.extendedTo(i.site.end))
+      
+
+    
 
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
@@ -129,36 +168,7 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
-    peek match
-      case label @ Some(Token(K.Label, _)) =>
-        val label_token =
-          if (label.value._1.isKeyword)
-            expect(label.value._1)
-          else
-            identifier()
-
-        val name = identifier()
-
-        peek match
-          case Some(Token(K.Colon, _)) =>
-            val type_exp = tpe()
-            Parameter(Some(label_token.toString), name.value, Some(type_exp), label_token.site.extendedTo(type_exp.site.end))
-          case _ =>
-            Parameter(Some(label.toString), name.value, None, label_token.site.extendedTo(name.site.end))
-
-      case Some(Token(K.Underscore, _)) =>
-        val unlabeled = expect(K.Underscore)
-        val name = identifier()
-
-        peek match
-          case Some(Token(K.Colon, _)) =>
-            val type_exp = tpe()
-            Parameter(None, name.value, Some(type_exp), unlabeled.site.extendedTo(type_exp.site.end))
-          case _ =>
-            Parameter(None, name.value, None, unlabeled.site.extendedTo(name.site.end))
-
-      case _ =>
-        recover(ExpectedTree("parameter", emptySiteAtLastBoundary), ErrorTree.apply)
+    ??? // TODO Antoine
         
 
   /** Parses and returns a type declaration. */
@@ -183,45 +193,111 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns an infix expression. */
   private[parsing] def infixExpression(precedence: Int = ast.OperatorPrecedence.min): Expression =
-    ???
+    
+    def infixExpressionInt(lhs: Expression, precedence: Int): Expression =
+      var lhs_mut = lhs
 
+      var (op, opSite) = peek match
+        case Some(Token(K.Operator, _)) =>
+          operatorIdentifier()
+        case _ =>
+          return lhs
 
+      while op.get.precedence >= precedence do
+        val rhs = ascribed()
+
+        val opIdentifier = Identifier(op.get.toString, opSite)
+
+        var (op2, opSite2) = if peek.map((t) => t.kind.isOperatorPart).getOrElse(false) then
+          operatorIdentifier()
+        else
+          return InfixApplication(opIdentifier, lhs_mut, rhs, opSite.extendedTo(rhs.site.end))
+
+        var op2_precedence = op2.get.precedence
+        val op2Identifier = Identifier(op2.get.toString, opSite2)
+
+        while op2_precedence > op.get.precedence do
+          val rhs2 = infixExpressionInt(rhs, op2_precedence)
+
+          op2_precedence = if peek.map((t) => t.kind.isOperatorPart).getOrElse(false) then
+            operatorIdentifier()._1.get.precedence
+          else
+            ast.OperatorPrecedence.min
+
+        lhs_mut = InfixApplication(op2Identifier, lhs_mut, rhs, opSite.extendedTo(rhs.site.end))
+
+      return lhs
+
+    infixExpressionInt(ascribed(), precedence)
+      
 
 
   /** Parses and returns an expression with an optional ascription. */
   private[parsing] def ascribed(): Expression =
     val exp = prefixExpression()
+
     peek match
-      case Some(Token(K.At | K.AtQuery | K.AtBang,s)) =>
+      case Some(Token(K.At, _)) | Some(Token(K.AtQuery, _)) | Some(Token(K.AtBang, _)) =>
         val token_casted = typecast()
         val type_t = tpe()
-        AscribedExpression(exp, token_casted, type_t, exp.site.extendedToCover(type_t.site))
+
+        AscribedExpression(exp, token_casted, type_t, exp.site.extendedTo(type_t.site.end))
       case _ =>
         exp
     
   /** Parses and returns a prefix application. */
   private[parsing] def prefixExpression(): Expression =
-    ???
+    peek match
+      case Some(Token(K.Operator, _)) =>
+        val o = operator()
+
+        if noWhitespaceBeforeNextToken then
+          val e = compoundExpression()
+
+          return PrefixApplication(o.asInstanceOf[Identifier], e, o.site.extendedTo(e.site.end))
+        else
+          return o
+      case _ =>
+        return compoundExpression()
+    
 
   /** Parses and returns a compound expression. */
   private[parsing] def compoundExpression(): Expression =
-    /*
-    val primary = primaryExpression()
+    val pe = primaryExpression()
 
     peek match
-      case Some(Token(K.Dot, _)) =>
+      case Some(Token(K.Dot, _)) | Some(Token(K.LParen, _)) => ()
+      case _ => return pe
+
+    peek.get.kind match
+      case K.Dot =>
+        take()
+
         peek match
           case Some(Token(K.Integer, _)) =>
+            val i = integerLiteral()
+            return Selection(pe, i, pe.site.extendedToCover(i.site))
 
-          case Some(Token)
-        
-        
-      case Some(Token(K.LParen, _)) =>
-        primary
+          case Some(Token(K.Identifier, _)) =>
+            val i = identifier()
+            return Selection(pe, i, pe.site.extendedToCover(i.site))
+
+          case Some(t) if t.kind.isOperatorPart =>
+            operator() match
+              case i: Identifier => return Selection(pe, i, pe.site.extendedTo(i.site.end))
+              case _ => throw FatalError("expected identifier", emptySiteAtLastBoundary)
+
+          case _ =>
+            recover(ExpectedTree("identifier or integer literal", emptySiteAtLastBoundary), ErrorTree.apply)
+
+      case K.LParen =>
+        val args = parenthesizedLabeledList(() => expression())
+        return Application(pe, args, pe.site.extendedToCover(args.last.site))
+
       case _ =>
-        primary
-    */
-    ???
+        throw FatalError("expected '.' or '('", emptySiteAtLastBoundary)
+
+    throw FatalError("unreachable", emptySiteAtLastBoundary)
 
 
   /** Parses and returns a term-level primary exression.
@@ -285,6 +361,7 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a term-level record expression. */
   private def recordExpression(): Record = //TODO GREG
+  /*
     val label_got = expect(K.Label)
     val identf_got = expect(K.Identifier)
     peek match
@@ -293,12 +370,13 @@ class Parser(val source: SourceFile):
         Record(identf_got.toString, fields, label_got.site.extendedToCover(fields.last.site))
       case _ =>
         Record(identf_got.toString, List(), label_got.site.extendedToCover(identf_got.site)) //TODO GREG, really empty list?
-    
-    
+  */
+    return record(recordExpressionFields, (name, fields, site) => Record(name, fields, site))
+
 
   /** Parses and returns the fields of a term-level record expression. */
   private def recordExpressionFields(): List[Labeled[Expression]] =
-    parenthesizedLabeledList(() => expression()) //TODO GREG, really this simple?
+    commaSeparatedList(K.RParen.matches, () => labeled(() => expression()))
     
 
   /** Parses and returns a conditional expression. */
@@ -306,18 +384,22 @@ class Parser(val source: SourceFile):
     // Needs to become IfExpression := 'if' Expression 'then' Expression 'else' Expression
     val if_exp = expect(K.If)
     val condition = expression()
-    val then_exp = expect(K.Then)
+
+    expect(K.Then)
     val success_case = expression()
-    val else_exp = expect(K.Else)
+
+    expect(K.Else)
     val failure_case = expression()
+
     Conditional(condition, success_case, failure_case, if_exp.site.extendedToCover(failure_case.site))
 
   /** Parses and returns a match expression. */
   private[parsing] def mtch(): Expression =
-    val match_exp = expect(K.Match)
-    val subject = expression()
-    val body = matchBody()
-    Match(subject, body, match_exp.site.extendedTo(lastBoundary))
+    val matchTok = expect(K.Match)
+    val e = expression()
+    val matchCases = matchBody()
+
+    Match(e, matchCases, matchTok.site.extendedToCover(matchCases.last.site))
 
   /** Parses and returns a the cases of a match expression. */
   private def matchBody(): List[Match.Case] =
@@ -349,7 +431,13 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a let expression. */
   private[parsing] def let(): Let =
-    ???
+    val b = binding() //TODO Antoine: Check if this is correct
+
+    expect(K.LBrace)
+    val e = expression()
+    val rBrace = expect(K.RBrace)
+
+    return Let(b, e, b.site.extendedToCover(rBrace.site))
 
   /** Parses and returns a lambda or parenthesized term-level expression. */
   private def lambdaOrParenthesizedExpression(): Expression =
@@ -443,15 +531,16 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a type-level expression. */
   private[parsing] def tpe(): Type =
-    val first_primary_type = primaryType()
+    val t = primaryType()
 
-    peek match
-      case Some(Token(K.Operator, _)) =>
-        val operator = operatorIdentifier()
-        val second_primary_type = primaryType()
-        Sum(List(first_primary_type, second_primary_type), first_primary_type.site.extendedTo(second_primary_type.site.end))
-      case _ =>
-        Sum(List(first_primary_type), first_primary_type.site.extendedTo(first_primary_type.site.end))
+    if take(K.Operator) != None then
+      val (o, _) = operatorIdentifier() //TODO Antoine: Error here apprently, don't know why
+
+      if Some(o) == ast.OperatorIdentifier.BitwiseOr then
+        val t2 = primaryType()
+        return Sum(List(t, t2), t.site.extendedTo(t2.site.end))
+
+    TypeIdentifier(t.site.text.toString, t.site)
     
 
   /** Parses and returns a type-level primary exression. */
@@ -467,13 +556,13 @@ class Parser(val source: SourceFile):
         recover(ExpectedTree("type expression", emptySiteAtLastBoundary), ErrorTree.apply)
 
   /** Parses and returns a type identifier. */
-  private def typeIdentifier(): Type = //TODO GREG
-    val identf = expect(K.Identifier)
-    TypeIdentifier(identf.toString, identf.site)
+  private def typeIdentifier(): Type =
+    val i = identifier()
+    TypeIdentifier(i.value, i.site)
 
   /** Parses and returns a list of type arguments. */
   private def typeArguments(): List[Labeled[Type]] =
-    ???
+    parenthesizedLabeledList(() => tpe())
 
   /** Parses and returns a type-level record expressions. */
   private[parsing] def recordType(): RecordType =
@@ -525,21 +614,21 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a binding pattern. */
   private def bindingPattern(): Binding =
-    val let_exp = expect(K.Let)
-    val name = expect(K.Identifier)
-    peek match
-      case Some(Token(K.Colon, _)) =>
-        val col_exp = expect(K.Colon)
-        val type_exp = tpe()
-        Binding(name.toString, Some(type_exp), None, let_exp.site.extendedToCover(type_exp.site))
-      case _ =>
-        Binding(name.toString, None, None, let_exp.site.extendedTo(lastBoundary))
+    val letTok = expect(K.Let)
+    val identifierExpr = identifier()
     
+    //TODO Antoine: Check if this is correct
+    if take(K.Colon) != None then
+      val ascriptionType = tpe()
+
+      return Binding(identifierExpr.value, Some(ascriptionType), None, letTok.site.extendedToCover(ascriptionType.site))
+    else
+      return Binding(identifierExpr.value, None, None, letTok.site.extendedToCover(identifierExpr.site))
 
   /** Parses and returns a value pattern. */
   private def valuePattern(): ValuePattern =
-    val exp = expression()
-    ValuePattern(exp, exp.site)
+    val e = expression()
+    ValuePattern(e, e.site)
 
   // --- Common trees ---------------------------------------------------------
 
@@ -559,16 +648,24 @@ class Parser(val source: SourceFile):
       fields: () => List[Field],
       make: (String, List[Field], SourceSpan) => T
   ): T =
-    val label = expect(K.Label)
-    val name = expect(K.Identifier)
-    peek match 
-      case Some(Token(K.LParen, _)) =>
-        val left = expect(K.LParen)
-        val contents = fields()
-        val right = expect(K.RBrace)
-        make(name.toString, contents, label.site.extendedToCover(right.site))
-      case _ =>
-        make(name.toString, List(), label.site.extendedTo(name.site.end))
+    val identifier = expect(K.Label)
+
+    // Ensure the first character is a '#'
+    if identifier.site.text.toString.charAt(0) != '#' then
+      report(SyntaxError("record identifier must start with a '#'", identifier.site))
+      throw FatalError("expected '#'", emptySiteAtLastBoundary)
+
+    // Singleton record
+    if take(K.LParen) == None then
+      return make(identifier.site.text.toString, List(), identifier.site)
+    else
+      val f = fields()
+
+      if take(K.RParen) == None then
+        report(ExpectedTokenError(K.RParen, emptySiteAtLastBoundary))
+        throw FatalError("expected ')'", emptySiteAtLastBoundary)
+
+      make(identifier.site.text.toString, f, identifier.site)
 
   /** Parses and returns a parenthesized list of labeled value.
    *
@@ -579,7 +676,10 @@ class Parser(val source: SourceFile):
   private[parsing] def parenthesizedLabeledList[T <: Tree](
       value: () => T
   ): List[Labeled[T]] =
-    ???
+    expect(K.LParen)
+    val l = commaSeparatedList(K.RParen.matches, () => labeled(value))
+    expect(K.RParen)
+    return l
 
   /** Parses and returns a value optionally prefixed by a label.
    *
@@ -592,7 +692,15 @@ class Parser(val source: SourceFile):
   private[parsing] def labeled[T <: Tree](
       value: () => T
   ): Labeled[T] =
-    ???
+    if peek == None | (peek.get.kind != K.Identifier && !peek.get.kind.isKeyword) then
+      val v = value()
+      return Labeled(None, v, v.site)
+
+    val t = take().get
+    expect(K.Colon)
+    val v = value()
+
+    return Labeled(Some(t.site.text.toString), v, t.site.extendedToCover(v.site))    
 
   /** Parses and returns a sequence of `element` separated by commas and delimited on the RHS  by a
    *  token satisfying `isTerminator`.
