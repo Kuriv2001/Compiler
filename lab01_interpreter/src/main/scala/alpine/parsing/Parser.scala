@@ -186,6 +186,8 @@ class Parser(val source: SourceFile):
     ???
 
 
+
+
   /** Parses and returns an expression with an optional ascription. */
   private[parsing] def ascribed(): Expression =
     val exp = prefixExpression()
@@ -312,7 +314,10 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a match expression. */
   private[parsing] def mtch(): Expression =
-    ???
+    val match_exp = expect(K.Match)
+    val subject = expression()
+    val body = matchBody()
+    Match(subject, body, match_exp.site.extendedTo(lastBoundary))
 
   /** Parses and returns a the cases of a match expression. */
   private def matchBody(): List[Match.Case] =
@@ -497,23 +502,44 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a wildcard pattern. */
   def wildcard(): Wildcard =
-    ???
+    val s = expect(K.Underscore)
+    Wildcard(s.site)
 
   /** Parses and returns a record pattern. */
   private def recordPattern(): RecordPattern =
-    ???
+    val label = expect(K.Label)
+    val name = expect(K.Identifier)
+    val left = expect(K.LBrace)
+    val fields = recordPatternFields()
+    val right = expect(K.RBrace)
+    RecordPattern(name.toString, fields, label.site.extendedToCover(right.site))
 
   /** Parses and returns the fields of a record pattern. */
   private def recordPatternFields(): List[Labeled[Pattern]] =
-    ???
+    val list_to_ret = List.empty[Labeled[Pattern]]
+    while peek != Some(K.RBrace) do
+      val pat = pattern()
+      list_to_ret :+ labeled(() => pat)
+    list_to_ret  
+    
 
   /** Parses and returns a binding pattern. */
   private def bindingPattern(): Binding =
-    ???
+    val let_exp = expect(K.Let)
+    val name = expect(K.Identifier)
+    peek match
+      case Some(Token(K.Colon, _)) =>
+        val col_exp = expect(K.Colon)
+        val type_exp = tpe()
+        Binding(name.toString, Some(type_exp), None, let_exp.site.extendedToCover(type_exp.site))
+      case _ =>
+        Binding(name.toString, None, None, let_exp.site.extendedTo(lastBoundary))
+    
 
   /** Parses and returns a value pattern. */
   private def valuePattern(): ValuePattern =
-    ???
+    val exp = expression()
+    ValuePattern(exp, exp.site)
 
   // --- Common trees ---------------------------------------------------------
 
@@ -533,7 +559,16 @@ class Parser(val source: SourceFile):
       fields: () => List[Field],
       make: (String, List[Field], SourceSpan) => T
   ): T =
-    ???
+    val label = expect(K.Label)
+    val name = expect(K.Identifier)
+    peek match 
+      case Some(Token(K.LParen, _)) =>
+        val left = expect(K.LParen)
+        val contents = fields()
+        val right = expect(K.RBrace)
+        make(name.toString, contents, label.site.extendedToCover(right.site))
+      case _ =>
+        make(name.toString, List(), label.site.extendedTo(name.site.end))
 
   /** Parses and returns a parenthesized list of labeled value.
    *
