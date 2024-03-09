@@ -441,7 +441,39 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a lambda or parenthesized term-level expression. */
   private def lambdaOrParenthesizedExpression(): Expression =
-    ???
+    val s = snapshot()
+
+    try {
+      val tokLparen = expect(K.LParen)
+      val e = expression()
+      val tokRparen = expect(K.RParen)
+      ParenthesizedExpression(e, tokLparen.site.extendedToCover(tokRparen.site))
+    } catch {
+      case _ =>
+        restore(s)
+        
+        val parameters = valueParameterList()
+
+        peek match
+          case Some(Token(K.Arrow, _)) =>
+            expect(K.Arrow)
+            val ascribedType = tpe()
+            expect(K.LBrace)
+            val e = expression()
+            val tokRbrace = expect(K.RBrace)
+
+            //TODO Antoine: fix site
+            Lambda(parameters, Some(ascribedType), e, ascribedType.site.extendedToCover(tokRbrace.site))
+            
+          case _ =>
+            expect(K.LBrace)
+            val e = expression()
+            val tokRbrace = expect(K.RBrace)
+
+            //TODO Antoine: fix site
+            Lambda(parameters, None, e, e.site.extendedToCover(tokRbrace.site))
+
+    }
 
   /** Parses and returns an operator. */
   private def operator(): Expression =
@@ -596,20 +628,12 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a record pattern. */
   private def recordPattern(): RecordPattern =
-    val label = expect(K.Label)
-    val name = expect(K.Identifier)
-    val left = expect(K.LBrace)
-    val fields = recordPatternFields()
-    val right = expect(K.RBrace)
-    RecordPattern(name.toString, fields, label.site.extendedToCover(right.site))
+    record(recordPatternFields, (name, fields, site) => RecordPattern(name, fields, site))
 
   /** Parses and returns the fields of a record pattern. */
   private def recordPatternFields(): List[Labeled[Pattern]] =
-    val list_to_ret = List.empty[Labeled[Pattern]]
-    while peek != Some(K.RBrace) do
-      val pat = pattern()
-      list_to_ret :+ labeled(() => pat)
-    list_to_ret  
+    commaSeparatedList(K.RParen.matches, () => labeled(() => pattern()))
+
     
 
   /** Parses and returns a binding pattern. */
