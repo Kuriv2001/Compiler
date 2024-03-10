@@ -59,7 +59,7 @@ class Parser(val source: SourceFile):
         recover(ExpectedTree("top-level declaration", emptySiteAtLastBoundary), ErrorTree.apply)
 
   /** Parses and returns a binding declaration. */
-  private[parsing] def binding(initializerIsExpected: Boolean = true): Binding = //TODO GREG
+  private[parsing] def binding(initializerIsExpected: Boolean = true): Binding =
     val letTok = expect(K.Let)
     val i = identifier()
 
@@ -114,7 +114,8 @@ class Parser(val source: SourceFile):
     val e = expression()
     val rBrace = expect(K.RBrace)
 
-    Function(funIdentifier.toString(), parameters /* TODO Antoine: needs to be generic parameters here */, parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
+    Function(funIdentifier.toString(), Nil /* generic parameters can be done later for the project */,
+            parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
     
 
   /** Parses and returns the identifier of a function. */
@@ -186,12 +187,14 @@ class Parser(val source: SourceFile):
     
 
   /** Parses and returns a type declaration. */
-  private[parsing] def typeDeclaration(): TypeDeclaration = //TODO need to add generic type parameters?
+  private[parsing] def typeDeclaration(): TypeDeclaration =
     val type_exp = expect(K.Type)
     val name = expect(K.Identifier)
     val type_eq = expect(K.Eq)
     val type_body = tpe()
-    TypeDeclaration(name.toString, List(), type_body, type_exp.site.extendedToCover(type_body.site)) 
+    TypeDeclaration(name.site.text.toString, Nil /* no need for now but generic parameters can be done later for the project */,
+                    type_body, type_exp.site.extendedToCover(type_body.site))
+
 
   /** Parses and returns a list of parameter declarations in angle brackets. */
   //--- This is intentionally left in the handout /*+++ +++*/
@@ -738,7 +741,7 @@ class Parser(val source: SourceFile):
       return Labeled(None, v, v.site)
 
     val t = take().get
-    expect(K.Colon) //TODO Antoine: error here to fix
+    expect(K.Colon) //TODO Antoine: error here to fix apprently but not sure
     val v = value()
 
     return Labeled(Some(t.site.text.toString), v, t.site.extendedToCover(v.site))    
