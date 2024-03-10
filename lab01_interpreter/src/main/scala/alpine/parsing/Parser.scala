@@ -691,23 +691,15 @@ class Parser(val source: SourceFile):
   /** Parses and returns a binding pattern. */
   private def bindingPattern(): Binding =
     val letTok = expect(K.Let)
-    val identifierExpr = identifier()
-
-    peek match
-      case Some(Token(K.Colon, _)) => 
-        val colon_exp = expect(K.Colon)
-        val type_exp = tpe()
-        Binding(identifierExpr.value, Some(type_exp), None, letTok.site.extendedToCover(type_exp.site))
-      case _ =>
-        Binding(identifierExpr.value, None, None, letTok.site.extendedToCover(identifierExpr.site))
+    val identifierExpr = identifier()  
     
-    // //TODO Antoine: Check if this is correct
-    // if take(K.Colon) != None then
-    //   val ascriptionType = tpe()
+    //TODO Antoine: Need to add reports inside this if
+    if take(K.Colon) != None then
+      val ascriptionType = tpe()
 
-    //   return Binding(identifierExpr.value, Some(ascriptionType), None, letTok.site.extendedToCover(ascriptionType.site))
-    // else
-    //   return Binding(identifierExpr.value, None, None, letTok.site.extendedToCover(identifierExpr.site))
+      return Binding(identifierExpr.value, Some(ascriptionType), None, letTok.site.extendedToCover(ascriptionType.site))
+    else
+      return Binding(identifierExpr.value, None, None, letTok.site.extendedToCover(identifierExpr.site))
 
   /** Parses and returns a value pattern. */
   private def valuePattern(): ValuePattern =
@@ -781,7 +773,7 @@ class Parser(val source: SourceFile):
       return Labeled(None, v, v.site)
 
     val t = take().get
-    expect(K.Colon)
+    expect(K.Colon) //TODO Antoine: error here to fix
     val v = value()
 
     return Labeled(Some(t.site.text.toString), v, t.site.extendedToCover(v.site))    
