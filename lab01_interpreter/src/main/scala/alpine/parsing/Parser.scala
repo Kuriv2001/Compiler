@@ -211,42 +211,63 @@ class Parser(val source: SourceFile):
   /** Parses and returns an infix expression. */
   private[parsing] def infixExpression(precedence: Int = ast.OperatorPrecedence.min): Expression =
     
-    def infixExpressionInt(lhs: Expression, precedence: Int): Expression =
-      var lhs_mut = lhs
+    def infixExpressionInt(lhs_in: Expression, min_precedence: Int): Expression =
+      val s = snapshot()
 
       var (op, opSite) = peek match
         case Some(Token(K.Operator, _)) =>
           operatorIdentifier()
-        case _ =>
-          return lhs
+        case _ => (None, emptySiteAtLastBoundary)
 
-      while op.get.precedence >= precedence do
-        val rhs = ascribed()
+      if op.isEmpty then
+        return lhs_in
+      else
+        restore(s)
 
-        val opIdentifier = Identifier(op.get.toString, opSite)
+      var lhs = lhs_in
+      var lookahead_tmp = op
 
-        var (op2, opSite2) = if peek.map((t) => t.kind.isOperatorPart).getOrElse(false) then
-          operatorIdentifier()
-        else
-          return InfixApplication(opIdentifier, lhs_mut, rhs, opSite.extendedTo(rhs.site.end))
+      while lookahead_tmp.isDefined && lookahead_tmp.get.precedence >= min_precedence do
+        op = lookahead_tmp
 
-        var op2_precedence = op2.get.precedence
-        val op2Identifier = Identifier(op2.get.toString, opSite2)
+        operatorIdentifier()
 
-        while op2_precedence > op.get.precedence do
-          val rhs2 = infixExpressionInt(rhs, op2_precedence)
+        var rhs = ascribed()
 
-          op2_precedence = if peek.map((t) => t.kind.isOperatorPart).getOrElse(false) then
-            operatorIdentifier()._1.get.precedence
-          else
-            ast.OperatorPrecedence.min
+        val s = snapshot()
 
-        lhs_mut = InfixApplication(op2Identifier, lhs_mut, rhs, opSite.extendedTo(rhs.site.end))
+        var (tmp1, _) = peek match
+          case Some(Token(K.Operator, _)) =>
+            operatorIdentifier()
+          case _ => (None, emptySiteAtLastBoundary)
+
+        lookahead_tmp = tmp1
+
+        // if lookahead_tmp.isDefined then
+        restore(s)
+
+        while lookahead_tmp.isDefined && lookahead_tmp.get.precedence > op.get.precedence do
+          val rhs2 = infixExpressionInt(rhs, op.get.precedence + 1)
+          rhs = rhs2
+
+          val s = snapshot()
+
+          var (tmp3, _) = peek match
+            case Some(Token(K.Operator, _)) =>
+              operatorIdentifier()
+            case _ => (None, emptySiteAtLastBoundary)
+
+          lookahead_tmp = tmp3
+
+          // if lookahead_tmp.isDefined then
+          restore(s)
+
+        val opIdentifier = Identifier(op.get.toString, emptySiteAtLastBoundary)
+        lhs = InfixApplication(opIdentifier, lhs, rhs, emptySiteAtLastBoundary)
 
       return lhs
 
-    infixExpressionInt(ascribed(), precedence)
-      
+    infixExpressionInt(ascribed(), precedence)  
 
 
   /** Parses and returns an expression with an optional ascription. */
@@ -583,14 +604,28 @@ class Parser(val source: SourceFile):
   private[parsing] def tpe(): Type =
     val t = primaryType()
 
-    if take(K.Operator) != None then
-      val (o, _) = operatorIdentifier() //TODO Antoine: Error here apprently, don't know why
+    def tpeRec(l: List[Type]): List[Type] =
+      peek match
+        case Some(Token(K.Operator, _)) =>
+          val s = snapshot()
+          val (o, _) = operatorIdentifier()
+          restore(s)
 
-      if Some(o) == ast.OperatorIdentifier.BitwiseOr then
-        val t2 = primaryType()
-        return Sum(List(t, t2), t.site.extendedTo(t2.site.end))
+          if o.get == ast.OperatorIdentifier.BitwiseOr then
+            take()
+            val t2 = primaryType()
+            tpeRec(l :+ t2)
+          else
+            l
+        case _ =>
+          l
 
-    TypeIdentifier(t.site.text.toString, t.site)
+    val l = tpeRec(List(t))
+
+    if l.length == 1 then
+      TypeIdentifier(t.site.text.toString, t.site)
+    else
+      Sum(l, l.head.site.extendedTo(l.last.site.end))
     
 
   /** Parses and returns a type-level primary exression. */
