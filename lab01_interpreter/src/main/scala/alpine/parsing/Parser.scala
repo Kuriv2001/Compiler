@@ -60,34 +60,6 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a binding declaration. */
   private[parsing] def binding(initializerIsExpected: Boolean = true): Binding = //TODO GREG
-  /*
-    val let_exp = expect(K.Let)
-    val name = identifier()
-    peek match
-      case Some(Token(K.Colon, _)) =>
-        val type_exp = tpe()
-        val eq_exp = expect(K.Eq)
-        val initializer = expression()
-        Binding(
-          name.toString,
-          Some(type_exp),
-          Some(initializer),
-          let_exp.site.extendedToCover(initializer.site)
-        )
-      case Some(Token(K.Eq, _)) =>
-        val type_exp = None
-        val eq_exp = expect(K.Eq)
-        val initializer = expression()
-        Binding(
-          name.toString,
-          type_exp,
-          Some(initializer),
-          let_exp.site.extendedToCover(initializer.site)
-        )
-      case _ =>
-        report(SyntaxError("expected ':' or '='", name.site.extendedTo(lastBoundary)))
-        return Binding(name.toString, None, None, let_exp.site.extendedTo(lastBoundary)) //TODO not correct, but return what then?
-  */
     val letTok = expect(K.Let)
     val i = identifier()
 
@@ -128,28 +100,21 @@ class Parser(val source: SourceFile):
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
     val fun = expect(K.Fun)
-    val identifier = expect(K.Identifier)
-
+    val funIdentifier = functionIdentifier()
     val parameters = valueParameterList()
-    // expect(K.LParen)
-    // val parameters = peek match
-    //   case Some(Token(K.RParen, _)) => valueParameterList()
-    //   case _ => List()
-    // expect(K.RParen)
 
-    val funType = peek match
-      case Some(Token(K.Arrow, _)) => 
+    val functionType = peek match
+      case Some(Token(K.Arrow, _)) =>
         expect(K.Arrow)
         Some(tpe())
-      case _ => None
+      case _ =>
+        None
 
     expect(K.LBrace)
-    val expression = infixExpression()
-    val lastToken = expect(K.RBrace)
+    val e = expression()
+    val rBrace = expect(K.RBrace)
 
-    new Function(identifier.toString, parameters, List(), funType, expression, fun.site.extendedToCover(lastToken.site))
-
-    
+    Function(funIdentifier.toString(), parameters /* TODO Antoine: needs to be generic parameters here */, parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
     
 
   /** Parses and returns the identifier of a function. */
