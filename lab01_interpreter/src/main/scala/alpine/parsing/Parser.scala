@@ -489,73 +489,41 @@ class Parser(val source: SourceFile):
     return Let(b, e, b.site.extendedToCover(rBrace.site))
 
   /** Parses and returns a lambda or parenthesized term-level expression. */
-  private def lambdaOrParenthesizedExpression(): Expression = //TODO UFF check
+  private def lambdaOrParenthesizedExpression(): Expression =
     val s = snapshot()
+
     try {
-      val parameters = valueParameterList()
-      
-      val arrow_exp = expect(K.Arrow)
-      peek match
-        case Some(Token(K.Type, _)) =>
-          val ascribedType = tpe()
-          val LBrace_exp = expect(K.LBrace)
-          val e = expression()
-          val rBrace_exp = expect(K.RBrace)
-          Lambda(parameters, Some(ascribedType), e, arrow_exp.site.extendedToCover(rBrace_exp.site)) //TODO site correct?
-        case _ =>
-          val LBrace_exp = expect(K.LBrace)
-          val e = expression()
-          val rBrace_exp = expect(K.RBrace)
-          Lambda(parameters, None, e, arrow_exp.site.extendedToCover(rBrace_exp.site)) //TODO site correct?
-    }catch {
+      val tokLparen = expect(K.LParen)
+      val e = expression()
+      val tokRparen = expect(K.RParen)
+      ParenthesizedExpression(e, tokLparen.site.extendedToCover(tokRparen.site))
+    } catch {
       case _ =>
         restore(s)
-        val l_parent = expect(K.LParen)
-        val e = expression()
-        val r_parent = expect(K.RParen)
-        ParenthesizedExpression(e, l_parent.site.extendedToCover(r_parent.site))
+
+        val parameters = valueParameterList()
+
+        peek match
+          case Some(Token(K.Arrow, _)) =>
+            expect(K.Arrow)
+            val ascribedType = tpe()
+            expect(K.LBrace)
+            val e = expression()
+            val tokRbrace = expect(K.RBrace)
+
+            //TODO Antoine: fix site
+            Lambda(parameters, Some(ascribedType), e, ascribedType.site.extendedToCover(tokRbrace.site))
+
+          case _ =>
+            expect(K.LBrace)
+            val e = expression()
+            val tokRbrace = expect(K.RBrace)
+
+            //TODO Antoine: fix site
+            Lambda(parameters, None, e, e.site.extendedToCover(tokRbrace.site))
+
     }
 
-    // val parenthese_exp = expect(K.LParen)
-    // val first_tpe = tpe()
-    // peek match 
-    //   case Some(Token(K.RParen, _)) =>
-    //     val rparen_exp = expect(K.RParen)
-    //     ParenthesizedType(first_tpe, parenthese_exp.site.extendedToCover(rparen_exp.site))
-    //   case _ =>
-    //     //TODO continue??   
-
-    // try {
-    //   val tokLparen = expect(K.LParen)
-    //   val e = expression()
-    //   val tokRparen = expect(K.RParen)
-    //   ParenthesizedExpression(e, tokLparen.site.extendedToCover(tokRparen.site))
-    // } catch {
-    //   case _ =>
-    //     //restore(s) TODO Antoine fix??
-        
-    //     val parameters = valueParameterList()
-
-    //     peek match
-    //       case Some(Token(K.Arrow, _)) =>
-    //         expect(K.Arrow)
-    //         val ascribedType = tpe()
-    //         expect(K.LBrace)
-    //         val e = expression()
-    //         val tokRbrace = expect(K.RBrace)
-
-    //         //TODO Antoine: fix site
-    //         Lambda(parameters, Some(ascribedType), e, ascribedType.site.extendedToCover(tokRbrace.site))
-            
-    //       case _ =>
-    //         expect(K.LBrace)
-    //         val e = expression()
-    //         val tokRbrace = expect(K.RBrace)
-
-    //         //TODO Antoine: fix site
-    //         Lambda(parameters, None, e, e.site.extendedToCover(tokRbrace.site))
-
-    // }
 
   /** Parses and returns an operator. */
   private def operator(): Expression =
