@@ -8,6 +8,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.SeqView.Reverse
 import scala.compiletime.ops.double
+import scala.collection.immutable.LazyList.cons
 
 class Parser(val source: SourceFile):
 
@@ -168,11 +169,58 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
-    ??? // TODO Antoine
+    // peek match
+    //   case Some(Token(K.Identifier, _)) =>
+    //     val ident_1 = identifier()
+    //     val ident_2 = identifier()
+    //     peek match //<identifier> <identifier> [: <type>] // labeled
+    //       case Some(Token(K.Colon, _)) => 
+    //         val type_exp = tpe()
+    //         Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
+    //       case _ =>
+    //         Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))
+
+    //   case Some(Token(K.Underscore, _)) => // '_' <identifier> [: <type>] // unlabeled
+    //     val underscore_exp = expect(K.Underscore)
+    //     val ident_exp = identifier()
+    //     peek match
+    //       case Some(Token(K.Colon, _)) =>
+    //         val type_exp = tpe()
+    //         Parameter(None, ident_exp.toString(), Some(type_exp), underscore_exp.site.extendedToCover(type_exp.site))
+    //       case _ =>
+    //         Parameter(None, ident_exp.toString(), None, underscore_exp.site.extendedToCover(ident_exp.site)) 
         
+    //   case _ => //<keyword> <identifier> [: <type>] // labeled by keyword TODO what?
+    //     Parameter(None, identifier().toString, None, emptySiteAtLastBoundary)
+    peek match
+      case Some(Token(K.Label, _)) => //<identifier> <identifier> [: <type>] // labeled or //<keyword> <identifier> [: <type>] // labeled by keyword
+            val ident_1 = identifier() //TODO how to handle keyword correctly??
+            val ident_2 = identifier()
+            peek match
+              case Some(Token(K.Colon, _)) => 
+                val colon_exp = expect(K.Colon)
+                val type_exp = tpe()
+                Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
+              case _ =>
+                Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))
+
+      case Some(Token(K.Underscore, _)) => //'_' <identifier> [: <type>] // unlabeled
+        val underscore_exp = expect(K.Underscore)
+        val ident_exp = identifier()
+        peek match
+          case Some(Token(K.Colon, _)) =>
+            val colon_exp = expect(K.Colon)
+            val type_exp = tpe()
+            Parameter(None, ident_exp.toString(), Some(type_exp), underscore_exp.site.extendedToCover(type_exp.site))
+          case _ =>
+            Parameter(None, ident_exp.toString(), None, underscore_exp.site.extendedToCover(ident_exp.site))
+
+      case _ =>
+        recover(ExpectedTree("parameter", emptySiteAtLastBoundary), ErrorTree.apply)
+    
 
   /** Parses and returns a type declaration. */
-  private[parsing] def typeDeclaration(): TypeDeclaration = //TODO GREG need to add generic type parameters?
+  private[parsing] def typeDeclaration(): TypeDeclaration = //TODO need to add generic type parameters?
     val type_exp = expect(K.Type)
     val name = expect(K.Identifier)
     val type_eq = expect(K.Eq)
@@ -360,7 +408,7 @@ class Parser(val source: SourceFile):
     
 
   /** Parses and returns a term-level record expression. */
-  private def recordExpression(): Record = //TODO GREG
+  private def recordExpression(): Record = //TODO correct?
   /*
     val label_got = expect(K.Label)
     val identf_got = expect(K.Identifier)
@@ -375,7 +423,7 @@ class Parser(val source: SourceFile):
 
 
   /** Parses and returns the fields of a term-level record expression. */
-  private def recordExpressionFields(): List[Labeled[Expression]] =
+  private def recordExpressionFields(): List[Labeled[Expression]] = //TODO good?
     commaSeparatedList(K.RParen.matches, () => labeled(() => expression()))
     
 
@@ -441,7 +489,14 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a lambda or parenthesized term-level expression. */
   private def lambdaOrParenthesizedExpression(): Expression =
-    val s = snapshot()
+    val parenthese_exp = expect(K.LParen)
+    val first_tpe = tpe()
+    peek match 
+      case Some(Token(K.RParen, _)) =>
+        val rparen_exp = expect(K.RParen)
+        ParenthesizedType(first_tpe, parenthese_exp.site.extendedToCover(rparen_exp.site))
+      case _ =>
+        //TODO continue??   
 
     try {
       val tokLparen = expect(K.LParen)
@@ -450,7 +505,7 @@ class Parser(val source: SourceFile):
       ParenthesizedExpression(e, tokLparen.site.extendedToCover(tokRparen.site))
     } catch {
       case _ =>
-        restore(s)
+        //restore(s) TODO Antoine fix??
         
         val parameters = valueParameterList()
 
@@ -597,15 +652,17 @@ class Parser(val source: SourceFile):
     parenthesizedLabeledList(() => tpe())
 
   /** Parses and returns a type-level record expressions. */
-  private[parsing] def recordType(): RecordType =
-    ???
+  private[parsing] def recordType(): RecordType =  //TODO thats enough??
+    record(recordTypeFields, (name, fields, site) => RecordType(name, fields, site))
+
+
   /** Parses and returns the fields of a type-level record expression. */
-  private def recordTypeFields(): List[Labeled[Type]] =
-    ???
+  private def recordTypeFields(): List[Labeled[Type]] = //TODO good?
+    commaSeparatedList(K.RParen.matches, () => labeled(() => tpe()))
 
   /** Parses and returns a arrow or parenthesized type-level expression. */
   private[parsing] def arrowOrParenthesizedType(): Type =
-    ???
+    ??? //TODO
 
   // --- Patterns -------------------------------------------------------------
 
