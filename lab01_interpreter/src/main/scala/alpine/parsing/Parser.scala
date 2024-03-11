@@ -648,7 +648,36 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a arrow or parenthesized type-level expression. */
   private[parsing] def arrowOrParenthesizedType(): Type =
-    ??? //TODO
+    val s = snapshot()
+
+    try {
+      val left = expect(K.LParen)
+      val t = tpe()
+      val right = expect(K.RParen)
+
+      peek match
+        case Some(Token(K.Arrow, _)) =>
+          expect(K.Arrow)
+          val returnType = tpe()
+          Arrow(List(Labeled(None, t, t.site)), returnType, left.site.extendedToCover(returnType.site))
+        case _ =>
+          ParenthesizedType(t, left.site.extendedToCover(right.site))
+    } catch {
+      case _ =>
+        restore(s)
+
+        val left = expect(K.LParen)
+        val types = recordTypeFields()
+        val right = expect(K.RParen)
+
+        peek match
+          case Some(Token(K.Arrow, _)) =>
+            expect(K.Arrow)
+            val returnType = tpe()
+            Arrow(types, returnType, types.head.site.extendedToCover(returnType.site))
+          case _ =>
+            recover(ExpectedTree("arrow or ')'", emptySiteAtLastBoundary), ErrorTree.apply)
+    }
 
   // --- Patterns -------------------------------------------------------------
 
