@@ -11,3 +11,13 @@ def parse(configuration: Configuration): Program =
   ds.throwOnError()
   ds.log()
   syntax
+
+/** Run semantic analysis with the given `configuration`. */
+def typeCheck(configuration: Configuration): TypedProgram =
+  val syntax = parse(configuration)
+  val typer = typing.Typer(configuration.traceInference)
+  val typedSyntax = typer.check(syntax)
+  val ds = typer.diagnostics
+  ds.throwOnError()
+  ds.log()
+  typedSyntax
