@@ -160,6 +160,7 @@ class Parser(val source: SourceFile):
             Parameter(None, ident_exp.site.text.toString, None, underscore_exp.site.extendedToCover(ident_exp.site))
 
       case _ =>
+        //give error when binding with an initialiser
         if peek.get.kind.isKeyword then //Bullshit or works?
           val ident_1 = take().get
           val ident_2 = identifier()
@@ -700,14 +701,20 @@ class Parser(val source: SourceFile):
   private def bindingPattern(): Binding =
     val letTok = expect(K.Let)
     val identifierExpr = identifier()  
-    
-    //TODO Antoine: Need to add reports inside this if
-    if take(K.Colon) != None then
-      val ascriptionType = tpe()
 
-      return Binding(identifierExpr.value, Some(ascriptionType), None, letTok.site.extendedToCover(ascriptionType.site))
-    else
-      return Binding(identifierExpr.value, None, None, letTok.site.extendedToCover(identifierExpr.site))
+    peek match
+      case Some(Token(K.Eq, _)) =>
+      //make error count higher and report error
+        recover(ExpectedTokenError(K.Eq, emptySiteAtLastBoundary), ErrorTree.apply)
+        Binding(identifierExpr.value, None, None, letTok.site.extendedTo(identifierExpr.site.end)) //TODO faut pas retourner ca
+      case _ =>
+            //TODO Antoine: Need to add reports inside this if
+        if take(K.Colon) != None then
+          val ascriptionType = tpe()
+
+          return Binding(identifierExpr.value, Some(ascriptionType), None, letTok.site.extendedToCover(ascriptionType.site))
+        else
+          return Binding(identifierExpr.value, None, None, letTok.site.extendedToCover(identifierExpr.site))
 
   /** Parses and returns a value pattern. */
   private def valuePattern(): ValuePattern =
