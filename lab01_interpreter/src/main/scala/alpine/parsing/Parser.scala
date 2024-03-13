@@ -144,9 +144,9 @@ class Parser(val source: SourceFile):
               case Some(Token(K.Colon, _)) => 
                 val colon_exp = expect(K.Colon)
                 val type_exp = tpe()
-                Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
+                Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
               case _ =>
-                Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))          
+                Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, None, ident_1.site.extendedToCover(ident_2.site))          
 
       case Some(Token(K.Underscore, _)) => //'_' <identifier> [: <type>] // unlabeled
         val underscore_exp = expect(K.Underscore)
@@ -167,9 +167,9 @@ class Parser(val source: SourceFile):
               case Some(Token(K.Colon, _)) => 
                 val colon_exp = expect(K.Colon)
                 val type_exp = tpe()
-                Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
+                Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
               case _ =>
-                Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))    
+                Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, None, ident_1.site.extendedToCover(ident_2.site))    
         else              
           recover(ExpectedTree("parameter", emptySiteAtLastBoundary), ErrorTree.apply)
     
