@@ -605,10 +605,9 @@ class Parser(val source: SourceFile):
         TypeIdentifier(t.site.text.toString, t.site)
       else if t.isInstanceOf[RecordType] then
         RecordType(t.site.text.toString, t.asInstanceOf[RecordType].fields, t.site) 
-      else if t.isInstanceOf[ParenthesizedType] then
-        ParenthesizedType(t, t.site)
       else
         t
+
     else
       Sum(l, l.head.site.extendedTo(l.last.site.end))
     
