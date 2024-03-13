@@ -136,31 +136,8 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a parameter declaration. */
   private[parsing] def parameter(): Declaration =
-    // peek match
-    //   case Some(Token(K.Identifier, _)) =>
-    //     val ident_1 = identifier()
-    //     val ident_2 = identifier()
-    //     peek match //<identifier> <identifier> [: <type>] // labeled
-    //       case Some(Token(K.Colon, _)) => 
-    //         val type_exp = tpe()
-    //         Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
-    //       case _ =>
-    //         Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))
-
-    //   case Some(Token(K.Underscore, _)) => // '_' <identifier> [: <type>] // unlabeled
-    //     val underscore_exp = expect(K.Underscore)
-    //     val ident_exp = identifier()
-    //     peek match
-    //       case Some(Token(K.Colon, _)) =>
-    //         val type_exp = tpe()
-    //         Parameter(None, ident_exp.toString(), Some(type_exp), underscore_exp.site.extendedToCover(type_exp.site))
-    //       case _ =>
-    //         Parameter(None, ident_exp.toString(), None, underscore_exp.site.extendedToCover(ident_exp.site)) 
-        
-    //   case _ => //<keyword> <identifier> [: <type>] // labeled by keyword TODO what?
-    //     Parameter(None, identifier().toString, None, emptySiteAtLastBoundary)
     peek match
-      case Some(Token(K.Label, _)) => //<identifier> <identifier> [: <type>] // labeled or //<keyword> <identifier> [: <type>] // labeled by keyword
+      case Some(Token(K.Identifier, _)) => //<identifier> <identifier> [: <type>] // labeled or //<keyword> <identifier> [: <type>] // labeled by keyword
             val ident_1 = identifier() //TODO how to handle keyword correctly??
             val ident_2 = identifier()
             peek match
@@ -169,7 +146,7 @@ class Parser(val source: SourceFile):
                 val type_exp = tpe()
                 Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
               case _ =>
-                Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))
+                Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))          
 
       case Some(Token(K.Underscore, _)) => //'_' <identifier> [: <type>] // unlabeled
         val underscore_exp = expect(K.Underscore)
@@ -178,12 +155,23 @@ class Parser(val source: SourceFile):
           case Some(Token(K.Colon, _)) =>
             val colon_exp = expect(K.Colon)
             val type_exp = tpe()
-            Parameter(None, ident_exp.toString(), Some(type_exp), underscore_exp.site.extendedToCover(type_exp.site))
+            Parameter(None, ident_exp.site.text.toString, Some(type_exp), underscore_exp.site.extendedToCover(type_exp.site))
           case _ =>
-            Parameter(None, ident_exp.toString(), None, underscore_exp.site.extendedToCover(ident_exp.site))
+            Parameter(None, ident_exp.site.text.toString, None, underscore_exp.site.extendedToCover(ident_exp.site))
 
       case _ =>
-        recover(ExpectedTree("parameter", emptySiteAtLastBoundary), ErrorTree.apply)
+        if peek.get.kind.isKeyword then //Bullshit or works?
+          val ident_1 = take().get
+          val ident_2 = identifier()
+            peek match
+              case Some(Token(K.Colon, _)) => 
+                val colon_exp = expect(K.Colon)
+                val type_exp = tpe()
+                Parameter(Some(ident_1.toString()), ident_2.toString(), Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
+              case _ =>
+                Parameter(Some(ident_1.toString()), ident_2.toString(), None, ident_1.site.extendedToCover(ident_2.site))    
+        else              
+          recover(ExpectedTree("parameter", emptySiteAtLastBoundary), ErrorTree.apply)
     
 
   /** Parses and returns a type declaration. */
