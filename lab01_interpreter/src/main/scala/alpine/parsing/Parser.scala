@@ -600,7 +600,15 @@ class Parser(val source: SourceFile):
     val l = tpeRec(List(t))
 
     if l.length == 1 then
-      TypeIdentifier(t.site.text.toString, t.site)
+      // Need to check what is the subtype of t to decide accordingly what to return (either a TypeIdentifier or a RecordType)
+      if t.isInstanceOf[TypeIdentifier] then
+        TypeIdentifier(t.site.text.toString, t.site)
+      else if t.isInstanceOf[RecordType] then
+        RecordType(t.site.text.toString, t.asInstanceOf[RecordType].fields, t.site) 
+      else if t.isInstanceOf[ParenthesizedType] then
+        ParenthesizedType(t, t.site)
+      else
+        t
     else
       Sum(l, l.head.site.extendedTo(l.last.site.end))
     
