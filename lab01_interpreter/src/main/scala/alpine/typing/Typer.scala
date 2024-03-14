@@ -153,12 +153,12 @@ final class Typer(
     if(arguments.forall(_ == arguments.head)) then
       val returnType = e.arguments.head.value.visit(this)
       val to_return = Type.Arrow(arguments, returnType)
-      Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site))
+      context.obligations.add(Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site)))
       context.obligations.constrain(e, to_return)
     else 
       val returnType = freshTypeVariable()
       val to_return = Type.Arrow(arguments, returnType)
-      Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site))
+      context.obligations.add(Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site)))
       context.obligations.constrain(e,to_return)
 
   def visitPrefixApplication(e: ast.PrefixApplication)(using context: Typer.Context): Type =
@@ -167,8 +167,15 @@ final class Typer(
   def visitInfixApplication(e: ast.InfixApplication)(using context: Typer.Context): Type =
     ???
 
-  def visitConditional(e: ast.Conditional)(using context: Typer.Context): Type =
-    ???
+  def visitConditional(e: ast.Conditional)(using context: Typer.Context): Type = //TODO use context and
+    checkInstanceOf(e.condition, Type.Bool)
+    val thenBranchType = checkedType(e.successCase)
+    val elseBranchType = checkedType(e.failureCase)
+    val returnType = freshTypeVariable()
+    context.obligations.add(Constraint.Subtype(thenBranchType, returnType, Constraint.Origin(e.site)))
+    context.obligations.add(Constraint.Subtype(elseBranchType, returnType, Constraint.Origin(e.site)))
+    return returnType //False
+
    
   def visitMatch(e: ast.Match)(using context: Typer.Context): Type =
     // Scrutinee is checked in isolation.
