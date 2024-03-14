@@ -93,7 +93,8 @@ final class Typer(
     assignNameDeclared(d)
 
     val t = context.inScope(d, { (inner) =>
-      ???
+      given Typer.Context = inner //TODO just to supress error
+      computedUncheckedType(d) //TODO just to supress error
     })
 
     val result = if t(Type.Flags.HasError) then Type.Error else t
