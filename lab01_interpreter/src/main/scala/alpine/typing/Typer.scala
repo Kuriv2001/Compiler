@@ -130,7 +130,9 @@ final class Typer(
     context.obligations.constrain(e, Type.String)
 
   def visitRecord(e: ast.Record)(using context: Typer.Context): Type =
-    ???
+    val fields = e.fields.map(f => Type.Labeled(f.label, f.value.visit(this)))
+    val result = Type.Record(e.identifier, fields)
+    context.obligations.constrain(e, result)
 
   def visitSelection(e: ast.Selection)(using context: Typer.Context): Type =
     val q = e.qualification.visit(this)
