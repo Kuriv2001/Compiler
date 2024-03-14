@@ -145,8 +145,21 @@ final class Typer(
         ???
     context.obligations.constrain(e, m)
 
-  def visitApplication(e: ast.Application)(using context: Typer.Context): Type =
-    ???
+  def visitApplication(e: ast.Application)(using context: Typer.Context): Type = //TODO didn't finish
+    val func = e.function.visit(this)
+    val arguments = e.arguments.map(f => Type.Labeled(f.label, f.value.visit(this))) 
+
+    //check if all arguments have the same type
+    if(arguments.forall(_ == arguments.head)) then
+      val returnType = e.arguments.head.value.visit(this)
+      val to_return = Type.Arrow(arguments, returnType)
+      Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site))
+      context.obligations.constrain(e, to_return)
+    else 
+      val returnType = freshTypeVariable()
+      val to_return = Type.Arrow(arguments, returnType)
+      Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site))
+      context.obligations.constrain(e,to_return)
 
   def visitPrefixApplication(e: ast.PrefixApplication)(using context: Typer.Context): Type =
     ???
@@ -156,7 +169,7 @@ final class Typer(
 
   def visitConditional(e: ast.Conditional)(using context: Typer.Context): Type =
     ???
-
+   
   def visitMatch(e: ast.Match)(using context: Typer.Context): Type =
     // Scrutinee is checked in isolation.
     val scrutinee = checkedType(e.scrutinee)
