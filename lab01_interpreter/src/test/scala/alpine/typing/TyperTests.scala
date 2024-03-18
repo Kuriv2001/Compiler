@@ -102,6 +102,7 @@ class TyperTests extends munit.FunSuite:
               _
             ) => true
           case _ => false
+
       )
     )
   }

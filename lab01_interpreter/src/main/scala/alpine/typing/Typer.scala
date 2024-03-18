@@ -9,6 +9,7 @@ import alpine.util.{Memo, FatalError}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.compiletime.ops.double
 
 // Visiting a declaration == type checking it
 // Visiting an expression == type inference
@@ -145,27 +146,67 @@ final class Typer(
         ???
     context.obligations.constrain(e, m)
 
-  def visitApplication(e: ast.Application)(using context: Typer.Context): Type = //TODO didn't finish
-    val func = e.function.visit(this)
-    val arguments = e.arguments.map(f => Type.Labeled(f.label, f.value.visit(this))) 
+  def visitApplication(e: ast.Application)(using context: Typer.Context): Type =
+    // Values
+    val functionType = e.function.visit(this)
+    val argumentLabeledTypes = e.arguments.map(arg => Type.Labeled(arg.label, arg.value.visit(this)))
+    val site = e.site
 
-    //check if all arguments have the same type
-    if(arguments.forall(_ == arguments.head)) then
-      val returnType = e.arguments.head.value.visit(this)
-      val to_return = Type.Arrow(arguments, returnType)
-      context.obligations.add(Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site)))
-      context.obligations.constrain(e, to_return)
+    //Check output type
+    var outputType: Type = Type.Never
+    if functionType.isArrow then
+      val arrow = functionType.asInstanceOf[Type.Arrow]
+      val outputType = arrow.output
     else 
-      val returnType = freshTypeVariable()
-      val to_return = Type.Arrow(arguments, returnType)
-      context.obligations.add(Constraint.Apply(func, arguments,returnType, Constraint.Origin(e.site)))
-      context.obligations.constrain(e,to_return)
+      val outputType = freshTypeVariable()
+    
+    // Constraints
+    //argumentLabeledTypes.foreach((arg) => context.obligations.add(Constraint.Subtype(arg.value, outputType, Constraint.Origin(site))))
+    context.obligations.add(Constraint.Apply(Type.Arrow(argumentLabeledTypes, outputType), argumentLabeledTypes, outputType, Constraint.Origin(site))) //TODO constraint origin?
+    context.obligations.constrain(e, outputType)
 
-  def visitPrefixApplication(e: ast.PrefixApplication)(using context: Typer.Context): Type =
-    ???
+
+  def visitPrefixApplication(e: ast.PrefixApplication)(using context: Typer.Context): Type = //More constraints TODO to check
+    // Values
+    val functionType = e.function.visit(this)
+    val argumentType = e.argument.visit(this)
+    val argumentList = List(Type.Labeled(None, argumentType))
+    val site = e.site
+
+    // Get output type
+    var outputType: Type = Type.Never
+    if functionType.isArrow then
+      val arrow = functionType.asInstanceOf[Type.Arrow]
+      outputType = arrow.output
+    else 
+      outputType = freshTypeVariable()
+
+    // Constraints 
+    context.obligations.add(Constraint.Apply(Type.Arrow(argumentList, outputType), argumentList, outputType, Constraint.Origin(site)))
+    context.obligations.constrain(e, argumentType)
 
   def visitInfixApplication(e: ast.InfixApplication)(using context: Typer.Context): Type =
-    ???
+    // Values 
+    val functionType = e.function.visit(this)
+    val lhsType = e.lhs.visit(this)
+    val lhsTypeList = List(Type.Labeled(None, lhsType))
+    val rhsType = e.rhs.visit(this)
+    val rhsTypeList = List(Type.Labeled(None, rhsType))
+    val site = e.site
+    val combinedList = lhsTypeList ++ rhsTypeList
+
+    // Get output types
+    var outputType: Type = Type.Never
+    if functionType.isArrow then
+      val arrow = functionType.asInstanceOf[Type.Arrow]
+      outputType = arrow.output
+    else 
+      outputType = freshTypeVariable()
+
+    // Context
+    context.obligations.add(Constraint.Apply(Type.Arrow(combinedList, outputType), combinedList, outputType, Constraint.Origin(site)))
+    context.obligations.constrain(e, lhsType)
+
 
   def visitConditional(e: ast.Conditional)(using context: Typer.Context): Type = //TODO use context and
     checkInstanceOf(e.condition, Type.Bool)
@@ -218,8 +259,12 @@ final class Typer(
   def visitTypeIdentifier(e: ast.TypeIdentifier)(using context: Typer.Context): Type =
       ???
 
-  def visitRecordType(e: ast.RecordType)(using context: Typer.Context): Type =
-    ???
+  def visitRecordType(e: ast.RecordType)(using context: Typer.Context): Type = //TODO check if correct
+    val identifString = e.identifier
+    val fields = e.fields.map(f => Type.Labeled(f.label, f.value.visit(this)))
+    val site = e.site
+    val result = Type.Record(identifString, fields)
+    context.obligations.constrain(e, result)
 
   def visitTypeApplication(e: ast.TypeApplication)(using context: Typer.Context): Type =
     throw FatalError("unsupported generic parameters", e.site)
@@ -257,11 +302,13 @@ final class Typer(
   def visitValuePattern(p: ast.ValuePattern)(using context: Typer.Context): Type =
     context.obligations.constrain(p, p.value.visit(this))
 
-  def visitRecordPattern(p: ast.RecordPattern)(using context: Typer.Context): Type =
-    ???
+  def visitRecordPattern(p: ast.RecordPattern)(using context: Typer.Context): Type = //That simple?
+    val fields = p.fields.map(f => Type.Labeled(f.label, f.value.visit(this)))
+    val result = Type.Record(p.identifier, fields)
+    context.obligations.constrain(p, result)
 
   def visitWildcard(p: ast.Wildcard)(using context: Typer.Context): Type =
-    ???
+    context.obligations.constrain(p, Type.Any) //TODO check if correct
 
   def visitTypeDeclaration(e: ast.TypeDeclaration)(using context: Typer.Context): Type =
     report(TypeError("type declarations are not supported", e.site))
@@ -709,7 +756,7 @@ object Typer:
       declarationsIgnoredByLookup = declarationsIgnoredByLookup.drop(1)
       result
 
-  end Context
+  end Context 
 
   /** The type information computed by a solver. */
   private final class Properties:
