@@ -308,7 +308,7 @@ final class Typer(
     context.obligations.constrain(p, result)
 
   def visitWildcard(p: ast.Wildcard)(using context: Typer.Context): Type =
-    context.obligations.constrain(p, Type.Any) //TODO check if correct
+    context.obligations.constrain(p, freshTypeVariable())
 
   def visitTypeDeclaration(e: ast.TypeDeclaration)(using context: Typer.Context): Type =
     report(TypeError("type declarations are not supported", e.site))
