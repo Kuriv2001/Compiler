@@ -208,14 +208,22 @@ final class Typer(
     context.obligations.constrain(e, lhsType)
 
 
-  def visitConditional(e: ast.Conditional)(using context: Typer.Context): Type = //TODO use context and
+  def visitConditional(e: ast.Conditional)(using context: Typer.Context): Type =
     checkInstanceOf(e.condition, Type.Bool)
     val thenBranchType = checkedType(e.successCase)
     val elseBranchType = checkedType(e.failureCase)
-    val returnType = freshTypeVariable()
+
+    var returnType: Type = Type.Never
+
+    if thenBranchType.equals(elseBranchType) then
+      returnType = thenBranchType
+    else
+      returnType = freshTypeVariable()
+
     context.obligations.add(Constraint.Subtype(thenBranchType, returnType, Constraint.Origin(e.site)))
     context.obligations.add(Constraint.Subtype(elseBranchType, returnType, Constraint.Origin(e.site)))
-    return returnType //False
+
+    context.obligations.constrain(e, returnType)
 
    
   def visitMatch(e: ast.Match)(using context: Typer.Context): Type =
