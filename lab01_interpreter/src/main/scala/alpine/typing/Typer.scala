@@ -265,7 +265,22 @@ final class Typer(
     context.obligations.constrain(e, result)
 
   def visitTypeIdentifier(e: ast.TypeIdentifier)(using context: Typer.Context): Type =
-      ???
+    val candidates = lookupUnqualified(e.value)
+
+    candidates match
+      case Nil =>
+        report(TypeError(s"undefined type identifier '${e.value}'", e.site))
+        Type.Error
+      case pick :: Nil =>
+        pick.tpe match
+          case Type.Meta(t) => t
+          case _ =>
+            report(TypeError(s"expected type identifier '${e.value}' to be a type", e.site))
+            Type.Error
+      case picks =>
+        report(TypeError(s"ambiguous use of type identifier '${e.value}'", e.site))
+        Type.Error
+
 
   def visitRecordType(e: ast.RecordType)(using context: Typer.Context): Type = //TODO check if correct
     val identifString = e.identifier
