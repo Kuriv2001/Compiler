@@ -10,6 +10,7 @@ import alpine.util.{Memo, FatalError}
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.compiletime.ops.double
+import alpine.symbols.Type.Arrow.from
 
 // Visiting a declaration == type checking it
 // Visiting an expression == type inference
@@ -155,10 +156,9 @@ final class Typer(
     //Check output type
     var outputType: Type = Type.Never
     if functionType.isArrow then
-      val arrow = functionType.asInstanceOf[Type.Arrow]
-      val outputType = arrow.output
+      outputType = from(functionType).get.output
     else 
-      val outputType = freshTypeVariable()
+      outputType = freshTypeVariable()
     
     // Constraints
     //argumentLabeledTypes.foreach((arg) => context.obligations.add(Constraint.Subtype(arg.value, outputType, Constraint.Origin(site))))
@@ -176,8 +176,7 @@ final class Typer(
     // Get output type
     var outputType: Type = Type.Never
     if functionType.isArrow then
-      val arrow = functionType.asInstanceOf[Type.Arrow]
-      outputType = arrow.output
+      outputType = from(functionType).get.output
     else 
       outputType = freshTypeVariable()
 
@@ -198,8 +197,7 @@ final class Typer(
     // Get output types
     var outputType: Type = Type.Never
     if functionType.isArrow then
-      val arrow = functionType.asInstanceOf[Type.Arrow]
-      outputType = arrow.output
+      outputType = from(functionType).get.output
     else 
       outputType = freshTypeVariable()
 
@@ -293,7 +291,7 @@ final class Typer(
     context.obligations.constrain(e, result)
 
   def visitTypeIdentifier(e: ast.TypeIdentifier)(using context: Typer.Context): Type =
-    val candidates = lookupUnqualified(e.value)
+    val candidates = resolveUnqualifiedTermIdentifier(e.value, e.site)
 
     candidates match
       case Nil =>
@@ -301,13 +299,20 @@ final class Typer(
         Type.Error
       case pick :: Nil =>
         pick.tpe match
-          case Type.Meta(t) => t
+          case Type.Meta(t) =>
+            // visitInfixApplication goes here when it fails
+            context.obligations.constrain(e, t)
           case _ =>
             report(TypeError(s"expected type identifier '${e.value}' to be a type", e.site))
             Type.Error
       case picks =>
-        report(TypeError(s"ambiguous use of type identifier '${e.value}'", e.site))
-        Type.Error
+        // Check that pick contains different types
+        val types = picks.map((p) => p.tpe)
+        if types.distinct.length == 1 then
+          context.obligations.constrain(e, types.head)
+        else
+          report(TypeError(s"ambiguous use of type identifier '${e.value}'", e.site))
+          Type.Error
 
 
   def visitRecordType(e: ast.RecordType)(using context: Typer.Context): Type = //TODO check if correct
