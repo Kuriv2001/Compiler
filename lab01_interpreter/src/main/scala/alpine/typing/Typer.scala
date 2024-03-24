@@ -246,7 +246,16 @@ final class Typer(
     unexpectedVisit(e)
 
   def visitLet(e: ast.Let)(using context: Typer.Context): Type =
-    ???
+    assignScopeName(e)
+
+    val t = context.inScope(e, { (inner) =>
+      given Typer.Context = inner
+      e.binding.visit(this)
+      e.body.visit(this)(using inner)
+    })
+
+    val result = if t.apply(Type.Flags.HasError) then Type.Error else t
+    context.obligations.constrain(e, result)
 
   def visitLambda(e: ast.Lambda)(using context: Typer.Context): Type =
     ???
