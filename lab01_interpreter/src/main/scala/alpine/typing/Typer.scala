@@ -12,6 +12,7 @@ import scala.collection.mutable
 import scala.compiletime.ops.double
 import alpine.symbols.Type.Arrow.from
 import alpine.typing.Constraint.Apply
+import alpine.symbols.Type.Arrow
 
 // Visiting a declaration == type checking it
 // Visiting an expression == type inference
@@ -255,8 +256,7 @@ final class Typer(
       e.body.visit(this)(using inner)
     })
 
-    val result = if t.apply(Type.Flags.HasError) then Type.Error else t
-    context.obligations.constrain(e, result)
+    context.obligations.constrain(e, t)
 
   def visitLambda(e: ast.Lambda)(using context: Typer.Context): Type =
     // TODO Antoine: doesn't work
@@ -268,16 +268,17 @@ final class Typer(
       computedUncheckedInputTypes(e.inputs)
     })
 
-    //Check output type
-    var outputType: Type = Type.Never
-    if lambdaType.isArrow then
-      val arrow = lambdaType.asInstanceOf[Type.Arrow]
-      val outputType = arrow.output
-    else 
-      val outputType = freshTypeVariable()
+    val arrowType = from(lambdaType)
 
-    context.obligations.add(Constraint.Subtype(lambdaType, outputType, Constraint.Origin(e.site)))
-    context.obligations.constrain(e, Type.Arrow(input_types, outputType))
+    arrowType match
+      case Some(arrow) =>
+        val outputType = arrow.output
+        context.obligations.add(Constraint.Subtype(outputType, lambdaType, Constraint.Origin(e.site)))
+        context.obligations.constrain(e, arrow)
+      case _ =>
+        val outputType = freshTypeVariable()
+        context.obligations.add(Constraint.Subtype(outputType, lambdaType, Constraint.Origin(e.site)))
+        context.obligations.constrain(e, Arrow(input_types, outputType))
 
 
   def visitParenthesizedExpression(
