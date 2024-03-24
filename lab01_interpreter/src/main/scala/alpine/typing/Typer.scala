@@ -258,7 +258,26 @@ final class Typer(
     context.obligations.constrain(e, result)
 
   def visitLambda(e: ast.Lambda)(using context: Typer.Context): Type =
-    ???
+    // TODO Antoine: doesn't work
+    assignScopeName(e)
+    val lambdaType = e.body.visit(this)
+
+    val input_types = context.inScope(e, { (inner) =>
+      given Typer.Context = inner
+      computedUncheckedInputTypes(e.inputs)
+    })
+
+    //Check output type
+    var outputType: Type = Type.Never
+    if lambdaType.isArrow then
+      val arrow = lambdaType.asInstanceOf[Type.Arrow]
+      val outputType = arrow.output
+    else 
+      val outputType = freshTypeVariable()
+
+    context.obligations.add(Constraint.Subtype(lambdaType, outputType, Constraint.Origin(e.site)))
+    context.obligations.constrain(e, Type.Arrow(input_types, outputType))
+
 
   def visitParenthesizedExpression(
       e: ast.ParenthesizedExpression
