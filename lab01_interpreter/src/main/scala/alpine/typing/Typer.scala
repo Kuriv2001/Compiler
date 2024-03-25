@@ -144,9 +144,9 @@ final class Typer(
     
     e.selectee match
       case s: ast.Identifier =>
-        ???
+        context.obligations.add(Constraint.Member(q, m, s.value, e, Constraint.Origin(e.site)))
       case s: ast.IntegerLiteral =>
-        ???
+        context.obligations.add(Constraint.Member(q, m, s.value.toInt, e, Constraint.Origin(e.site)))
     context.obligations.constrain(e, m)
 
   def visitApplication(e: ast.Application)(using context: Typer.Context): Type =
@@ -367,7 +367,8 @@ final class Typer(
     if hasErrorMember then Type.Error else partialResult
 
   def visitParenthesizedType(e: ast.ParenthesizedType)(using context: Typer.Context): Type =
-    ???
+    val inner_type = e.inner.visit(this)
+    context.obligations.constrain(e, inner_type)
 
   def visitValuePattern(p: ast.ValuePattern)(using context: Typer.Context): Type =
     context.obligations.constrain(p, p.value.visit(this))
