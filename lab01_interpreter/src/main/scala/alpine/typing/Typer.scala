@@ -259,7 +259,6 @@ final class Typer(
     context.obligations.constrain(e, t)
 
   def visitLambda(e: ast.Lambda)(using context: Typer.Context): Type =
-    // TODO Antoine: doesn't work
     assignScopeName(e)
     val lambdaType = e.body.visit(this)
 
@@ -273,11 +272,12 @@ final class Typer(
     arrowType match
       case Some(arrow) =>
         val outputType = arrow.output
-        context.obligations.add(Constraint.Subtype(outputType, lambdaType, Constraint.Origin(e.site)))
+        context.obligations.add(Constraint.Subtype(outputType, lambdaType, Constraint.Origin(e.body.site)))
         context.obligations.constrain(e, arrow)
       case _ =>
+        // TODO Antoine: doesn't work
         val outputType = freshTypeVariable()
-        context.obligations.add(Constraint.Subtype(outputType, lambdaType, Constraint.Origin(e.site)))
+        context.obligations.add(Constraint.Subtype(outputType, lambdaType, Constraint.Origin(e.body.site)))
         context.obligations.constrain(e, Arrow(input_types, outputType))
 
 
@@ -285,7 +285,6 @@ final class Typer(
       e: ast.ParenthesizedExpression
   )(using context: Typer.Context): Type = //TODO check if more needed
     val innerExp = e.inner.visit(this)
-    val siteExp = e.site
     context.obligations.constrain(e, innerExp)
 
   def visitAscribedExpression(e: ast.AscribedExpression)(using context: Typer.Context): Type =
@@ -293,14 +292,12 @@ final class Typer(
       case Type.Error =>
         Type.Error
       case ascription =>
-        ???
-        // val innerExp = e.inner.visit(this)
-        // val operation = e.operation
-        // val ascriptionType = e.ascription.visit(this)
-        
-        // // Check if the ascription is a subtype of the inner expression
-        // context.obligations.add(Constraint.Subtype(ascriptionType, innerExp, Constraint.Origin(e.site)))
-        // context.obligations.constrain(e, ascriptionType)
+        //check if  the ascription is narrowing or widening
+
+        val inferred = e.inner.visit(this)
+        context.obligations.add(Constraint.Subtype(inferred, ascription, Constraint.Origin(e.site)))
+        context.obligations.constrain(e, ascription)
+
     context.obligations.constrain(e, result)    
 
   def visitTypeIdentifier(e: ast.TypeIdentifier)(using context: Typer.Context): Type =
