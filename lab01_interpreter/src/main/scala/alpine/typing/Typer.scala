@@ -283,8 +283,10 @@ final class Typer(
 
   def visitParenthesizedExpression(
       e: ast.ParenthesizedExpression
-  )(using context: Typer.Context): Type =
-    ???
+  )(using context: Typer.Context): Type = //TODO check if more needed
+    val innerExp = e.inner.visit(this)
+    val siteExp = e.site
+    context.obligations.constrain(e, innerExp)
 
   def visitAscribedExpression(e: ast.AscribedExpression)(using context: Typer.Context): Type =
     val result = evaluateTypeTree(e.ascription) match
