@@ -294,7 +294,14 @@ final class Typer(
         Type.Error
       case ascription =>
         ???
-    context.obligations.constrain(e, result)
+        // val innerExp = e.inner.visit(this)
+        // val operation = e.operation
+        // val ascriptionType = e.ascription.visit(this)
+        
+        // // Check if the ascription is a subtype of the inner expression
+        // context.obligations.add(Constraint.Subtype(ascriptionType, innerExp, Constraint.Origin(e.site)))
+        // context.obligations.constrain(e, ascriptionType)
+    context.obligations.constrain(e, result)    
 
   def visitTypeIdentifier(e: ast.TypeIdentifier)(using context: Typer.Context): Type =
     val candidates = lookupUnqualified(e.value)
