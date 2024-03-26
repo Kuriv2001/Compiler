@@ -13,6 +13,8 @@ import scala.compiletime.ops.double
 import alpine.symbols.Type.Arrow.from
 import alpine.typing.Constraint.Apply
 import alpine.symbols.Type.Arrow
+import alpine.symbols.Type.some
+import alpine.symbols.Type.none
 
 // Visiting a declaration == type checking it
 // Visiting an expression == type inference
@@ -286,11 +288,23 @@ final class Typer(
       case Type.Error =>
         Type.Error
       case ascription =>
-        //check if  the ascription is narrowing or widening
-
         val inferred = e.inner.visit(this)
-        context.obligations.add(Constraint.Subtype(inferred, ascription, Constraint.Origin(e.site)))
-        context.obligations.constrain(e, ascription)
+        
+        e.operation match
+          case ast.Typecast.Widen =>
+            context.obligations.add(Constraint.Subtype(inferred, ascription, Constraint.Origin(e.site)))
+            ascription
+
+          case ast.Typecast.Narrow =>
+            context.obligations.add(Constraint.Subtype(ascription, inferred, Constraint.Origin(e.site)))
+            if ascription.isSubtypeOf(inferred) then
+              some(ascription)
+            else
+              none
+            
+          case ast.Typecast.NarrowUnconditionally =>
+            context.obligations.add(Constraint.Subtype(ascription, inferred, Constraint.Origin(e.site)))
+            ascription
 
     context.obligations.constrain(e, result)    
 
