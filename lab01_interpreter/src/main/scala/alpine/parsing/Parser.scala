@@ -204,7 +204,7 @@ class Parser(val source: SourceFile):
       val s = snapshot()
 
       var (op, opSite) = peek match
-        case Some(Token(K.Operator, _)) =>
+        case Some(token) if token.kind.isOperatorPart =>
           operatorIdentifier()
         case _ => (None, emptySiteAtLastBoundary)
 
@@ -670,7 +670,8 @@ class Parser(val source: SourceFile):
           case Some(Token(K.Arrow, _)) =>
             expect(K.Arrow)
             val returnType = tpe()
-            Arrow(types, returnType, types.head.site.extendedToCover(returnType.site))
+
+            Arrow(types, returnType, left.site.extendedToCover(returnType.site))
           case _ =>
             recover(ExpectedTree("arrow or ')'", emptySiteAtLastBoundary), ErrorTree.apply)
     }
