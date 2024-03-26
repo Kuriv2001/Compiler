@@ -99,13 +99,18 @@ final class Typer(
     assignNameDeclared(d)
 
     val t = context.inScope(d, { (inner) =>
-      given Typer.Context = inner //TODO just to supress error
-      computedUncheckedType(d) //TODO just to supress error
+      given Typer.Context = inner
+      val arrow = computedUncheckedType(d)
+      memoizedUncheckedType(d, (_) => arrow)
+      checkInstanceOf(d.body, arrow.output)
+      context.obligations.constrain(d, arrow)
     })
 
     val result = if t(Type.Flags.HasError) then Type.Error else t
     properties.checkedType.put(d, result)
     result
+
+
   def visitParameter(d: ast.Parameter)(using context: Typer.Context): Type =
     addToParent(d)
     assignNameDeclared(d)
@@ -255,7 +260,7 @@ final class Typer(
     val t = context.inScope(e, { (inner) =>
       given Typer.Context = inner
       e.binding.visit(this)
-      e.body.visit(this)(using inner)
+      e.body.visit(this)
     })
 
     context.obligations.constrain(e, t)
@@ -264,7 +269,7 @@ final class Typer(
     assignScopeName(e)
 
     context.inScope(e, { (inner) =>
-      // given Typer.Context = inner
+      given Typer.Context = inner
       val labeled_inputs = computedUncheckedInputTypes(e.inputs)
       val output_type = e.output match
         case Some(o) => o.visit(this)
@@ -279,7 +284,7 @@ final class Typer(
 
   def visitParenthesizedExpression(
       e: ast.ParenthesizedExpression
-  )(using context: Typer.Context): Type = //TODO check if more needed
+  )(using context: Typer.Context): Type =
     val innerExp = e.inner.visit(this)
     context.obligations.constrain(e, innerExp)
 
@@ -318,8 +323,8 @@ final class Typer(
       case pick :: Nil =>
         pick.tpe match
           case Type.Meta(t) =>
-            context.obligations.constrain(e, t)
-            //t
+            //context.obligations.constrain(e, t)
+            t
           case _ =>
             report(TypeError(s"expected type identifier '${e.value}' to be a type", e.site))
             Type.Error
@@ -327,14 +332,14 @@ final class Typer(
         // Check that pick contains different types
         val types = picks.map((p) => p.tpe)
         if types.distinct.length == 1 then
-          context.obligations.constrain(e, types.head)
-          //types.head
+          //context.obligations.constrain(e, types.head)
+          types.head
         else
           report(TypeError(s"ambiguous use of type identifier '${e.value}'", e.site))
           Type.Error
 
 
-  def visitRecordType(e: ast.RecordType)(using context: Typer.Context): Type = //TODO check if correct
+  def visitRecordType(e: ast.RecordType)(using context: Typer.Context): Type = 
     val identifString = e.identifier
     val fields = e.fields.map(f => Type.Labeled(f.label, f.value.visit(this)))
     val site = e.site

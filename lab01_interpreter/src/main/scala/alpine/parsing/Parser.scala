@@ -319,7 +319,10 @@ class Parser(val source: SourceFile):
 
       case K.LParen =>
         val args = parenthesizedLabeledList(() => expression())
-        return Application(pe, args, pe.site.extendedToCover(args.last.site))
+        if args.isEmpty then
+          return Application(pe, List(), pe.site.extendedToCover(pe.site))
+        else
+          return Application(pe, args, pe.site.extendedToCover(args.last.site))
 
       case _ =>
         throw FatalError("expected '.' or '('", emptySiteAtLastBoundary)
