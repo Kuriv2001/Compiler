@@ -22,7 +22,14 @@ def typeCheck(configuration: Configuration): TypedProgram =
   ds.log()
   typedSyntax
 
-  /** Interpret the input program with the given `configuration` and returns its exit status. */
+/** Rewrites the input program in Scala using the given `configuration`. */
+def transpile(configuration: Configuration): Unit =
+  val typedSyntax = typeCheck(configuration)
+  val transpiler = codegen.ScalaPrinter(typedSyntax)
+  val output = transpiler.transpile()
+  println(output)
+
+/** Interpret the input program with the given `configuration` and returns its exit status. */
 def interpret(configuration: Configuration): Int =
   val typedSyntax = typeCheck(configuration)
   val interpreter = evaluation.Interpreter(

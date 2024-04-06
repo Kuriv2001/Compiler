@@ -174,7 +174,7 @@ final class Typer(
         context.obligations.constrain(e, outputType)
 
 
-  def visitPrefixApplication(e: ast.PrefixApplication)(using context: Typer.Context): Type = //More constraints TODO to check
+  def visitPrefixApplication(e: ast.PrefixApplication)(using context: Typer.Context): Type =
     // Values
     val functionType = e.function.visit(this)
     val arrowType = from(functionType)
@@ -495,8 +495,8 @@ final class Typer(
       // inferred (i.e., variable in a match case without ascription).
       properties.uncheckedType.updateWith(n)((x) => x.map((_) => Memo.Computed(u)))
 
-    for (n, r) <- solution.binding do
-      val s = symbols.EntityReference(r.entity, solution.substitution.reify(r.tpe))
+    for (n, r) <- (obligations.inferredBinding ++ solution.binding) do
+      val s = r.withTypeTransformed((t) => solution.substitution.reify(t)) // ← This line changes.
       properties.treeToReferredEntity.put(n, s)
 
     reportBatch(solution.diagnostics.elements)
@@ -558,7 +558,7 @@ final class Typer(
       case Nil =>
         context.obligations.constrain(e, Type.Error)
       case pick :: Nil =>
-        properties.treeToReferredEntity.put(e, pick)
+        context.obligations.bind(e, pick)
         context.obligations.constrain(e, pick.tpe)
       case picks =>
         val t = freshTypeVariable()
