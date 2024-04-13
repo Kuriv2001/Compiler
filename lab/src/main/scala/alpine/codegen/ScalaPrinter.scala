@@ -113,7 +113,13 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
 
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Record): String =
-    ???
+    // TODO: Check if this makes sense.
+    val b = StringBuilder("R")
+    b ++= t.identifier
+    for f <- t.fields do
+      b ++= f.label.getOrElse("")
+      b ++= discriminator(f.value)
+    b.toString
 
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Arrow): String =
