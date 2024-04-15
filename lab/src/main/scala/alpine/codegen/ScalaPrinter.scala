@@ -27,14 +27,35 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     c.output.toString
 
   /** Writes the Scala declaration of `t` in `context`. */
-  private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit =
- 
-      ??? 
+  private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit = //Draft, check if makes sense
+    //Handled labels as seperate entry (string) before value in case class
+    //Use case class of scala
+    context.output ++= "case class "
+    context.output ++= discriminator(t)
+    context.output ++= "("
+    context.output.appendCommaSeparated(t.fields) { (output, field) =>
+      //Does #record_name(label: Type) => case class record_name(label: String = "label", label_value: Type)
+      //Add label as entry
+      output ++= field.label.getOrElse("_")
+      output ++= ": "
+      output ++= "String "
+      output ++= "= \""
+      output ++= field.label.getOrElse("_")
+      output ++= "\""
+      output ++= ", "
+      //Add type as entry for actual value
+      output ++= field.label.getOrElse("_")
+      output ++= "_value: "
+      output ++= transpiledType(field.value)
+    }
+    context.output ++= ")"
 
   /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
   private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
- 
-      ??? 
+    // Does #record_name() => case object record_name
+    //Use case object of scala
+      context.output ++= "case object "
+      context.output ++= discriminator(t)
 
   /** Returns the transpiled form of `t`. */
   private def transpiledType(t: symbols.Type)(using context: Context): String =
