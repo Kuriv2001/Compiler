@@ -5,6 +5,7 @@
 .bsp
 project
 target
+lab/.metals
 lab/.metals/metals.lock.db
 lab/.metals/metals.log
 lab/.metals/metals.mv.db
