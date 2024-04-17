@@ -258,7 +258,17 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     context.output ++= n.value
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
-    ???
+    // TODO: suspicious function
+    context.output ++= n.identifier
+    context.output ++= "("
+    context.output.appendCommaSeparated(n.fields) { (o, a) =>
+      o ++= a.label.getOrElse("_")
+      o ++= ", "
+      a.value.visit(this)
+    }
+    context.output ++= ")"
+
+    // record_name(label_identifier1, type1, label_identifier2, type2, ...)
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     n.qualification.visit(this)
