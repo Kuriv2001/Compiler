@@ -290,24 +290,34 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     n.failureCase.visit(this)
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit = //Draft
-    // First line of match: "x match \n"
-    val scrutinee = n.scrutinee.unparsed //TODO correct way to find name??
-    context.output ++= scrutinee
-    context.output ++= "match "
-    context.output ++= "{\n"
+    n.scrutinee.visit(this)
+    context.output ++= " match"
+    context.output ++= "\n"
     // For each case, add a line with indent + the pattern and the body + newline
     val cases = n.cases
     context.indentation += 1
     for c <- cases do
-      c.visit(this)
+      context.output ++= "  " * context.indentation
+      c.visit(this) // Or visitMatchCase(c)(using context) ?
     context.indentation -= 1
 
   override def visitMatchCase(n: ast.Match.Case)(using context: Context): Unit = //Draft
-    context.output ++= "case " * context.indentation
+    context.output ++= "case "
     n.pattern.visit(this)
-    context.output ++= " => "
+    context.output ++= " =>"
+    context.indentation += 1
+    context.output ++= "\n"
+    context.output ++= "  " * context.indentation
     n.body.visit(this)
     context.output ++= "\n"
+    context.indentation -= 1
+
+    /* scrutinee match
+        case pattern1 =>
+          body1
+        case pattern2 =>
+          body2     
+      */
 
   override def visitLet(n: ast.Let)(using context: Context): Unit =
     // Use a block to uphold lexical scoping.
