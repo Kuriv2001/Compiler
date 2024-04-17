@@ -28,15 +28,22 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
 
   /** Writes the Scala declaration of `t` in `context`. */
   private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit = //Draft, check if makes sense
+    if t.fields.isEmpty then
+      emitSingletonRecord(t)
+    else
+      emitNonSingletonRecord(t)
+
+  /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
+  private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
     //Handled labels as seperate entry (string) before value in case class
     //Use case class of scala
     context.output ++= "case class "
     context.output ++= discriminator(t)
     context.output ++= "("
     context.output.appendCommaSeparated(t.fields) { (output, field) =>
-      //Does #record_name(label: Type) => case class record_name(label: String = "label", label_value: Type)
+      //Does #record_name(label1: type1, label2: type2) => case class record_name(label1: String = "label1", label_value1: type1, label2: String = "label2", label_value2: type2, ...)
       //Add label as entry
-      output ++= field.label.getOrElse("_")
+      output ++= field.label.getOrElse("_") // if empty => _: String = "_"
       output ++= ": "
       output ++= "String "
       output ++= "= \""
@@ -44,18 +51,18 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
       output ++= "\""
       output ++= ", "
       //Add type as entry for actual value
-      output ++= field.label.getOrElse("_")
+      output ++= field.label.getOrElse("_") // if empty => __value: type
       output ++= "_value: "
       output ++= transpiledType(field.value)
     }
     context.output ++= ")"
 
-  /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
-  private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
+  /** Writes the Scala declaration of `t`, which is a singleton, in `context`. */
+  private def emitSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
     // Does #record_name() => case object record_name
     //Use case object of scala
-      context.output ++= "case object "
-      context.output ++= discriminator(t)
+    context.output ++= "case object "
+    context.output ++= discriminator(t)
 
   /** Returns the transpiled form of `t`. */
   private def transpiledType(t: symbols.Type)(using context: Context): String =
