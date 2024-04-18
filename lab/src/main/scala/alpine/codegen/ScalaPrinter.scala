@@ -329,19 +329,13 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
   override def visitMatchCase(n: ast.Match.Case)(using context: Context): Unit = //Draft
     context.output ++= "case "
     n.pattern.visit(this)
-    context.output ++= " =>"
-    context.indentation += 1
-    context.output ++= "\n"
-    context.output ++= "  " * context.indentation
+    context.output ++= " => "
     n.body.visit(this)
     context.output ++= "\n"
-    context.indentation -= 1
 
     /* scrutinee match
-        case pattern1 =>
-          body1
-        case pattern2 =>
-          body2     
+        case pattern1 => body1
+        case pattern2 => body2     
       */
 
   override def visitLet(n: ast.Let)(using context: Context): Unit =
@@ -431,7 +425,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     ???
 
   override def visitWildcard(n: ast.Wildcard)(using context: Context): Unit =
-    ???
+    context.output ++= "_"
 
   override def visitError(n: ast.ErrorTree)(using context: Context): Unit =
     unexpectedVisit(n)
