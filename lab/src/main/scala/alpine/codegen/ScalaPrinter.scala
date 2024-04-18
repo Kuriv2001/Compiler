@@ -10,6 +10,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import alpine.symbols.Type
 import alpine.symbols.Type.Bool
+import alpine.ast.Typecast
 
 /** The transpilation of an Alpine program to Scala. */
 final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrinter.Context, Unit]:
@@ -173,10 +174,6 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
       case symbols.Entity.Builtin(n, _) => s"alpine_rt.builtin.${n.identifier}"
       case symbols.Entity.Declaration(n, t) => scalaized(n) + discriminator(t)
       case _: symbols.Entity.Field => ???
-        //CHECK
-        //val index : Int = _.index
-        //val record : Type.Record = sef.whole
-        //"._V"  + (index+1).toString
 
 
   /** Returns a string representation of `n` suitable for use as a Scala identifier. */
@@ -317,6 +314,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     n.failureCase.visit(this)
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit = //Draft
+  //CHECK
     n.scrutinee.visit(this)
     context.output ++= " match"
     context.output ++= "\n"
@@ -382,7 +380,31 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
   override def visitAscribedExpression(
       n: ast.AscribedExpression
   )(using context: Context): Unit =
-    ???
+    val castType = transpiledType(n.ascription.tpe)
+    //n.inner.visit(this)
+
+    n.operation match {
+      case Typecast.NarrowUnconditionally =>
+        context.output ++= s"alpine_rt.narrowUnconditionally[${castType}]("
+        n.inner.visit(this)
+        context.output ++= ")"
+
+      case Typecast.Narrow =>
+        
+      case Typecast.Widen => 
+        // context.output ++= ".isInstanceOf[" + castType + "] "
+        // context.output ++= "match {\n"
+
+        // context.indentation += 1
+        // context.output ++= "case true => Some("
+        // n.inner.visit(this)
+        // context.output ++= ".asInstanceOf[" + castType + "])\n"
+
+        // context.output ++= "case false => None"
+        // context.indentation -= 1
+        // context.output ++= "}"
+      }
+    
 
   override def visitTypeIdentifier(n: ast.TypeIdentifier)(using context: Context): Unit =
     unexpectedVisit(n)
@@ -403,7 +425,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     unexpectedVisit(n)
 
   override def visitValuePattern(n: ast.ValuePattern)(using context: Context): Unit =
-    ???
+    n.value.visit(this)
 
   override def visitRecordPattern(n: ast.RecordPattern)(using context: Context): Unit =
     ???
