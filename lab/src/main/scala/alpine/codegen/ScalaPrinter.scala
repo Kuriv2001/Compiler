@@ -35,6 +35,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
 
   /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
   private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
+    //CHECK
     //Handled labels as seperate entry (string) before value in case class
     //Use case class of scala
     var counter : Int = 0
@@ -44,12 +45,21 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     context.output.appendCommaSeparated(t.fields) { (output, field) =>
       //Does #record_name(label1: type1, label2: type2) => case class record_name(label1: String = "label1", label_value1: type1, label2: String = "label2", label_value2: type2, ...)
       //Add label as entry
-      output ++= " " + field.label.getOrElse("")+ "_L"  + counter.toString // if empty => __value: type
+      // output ++= "L_"  + counter.toString() // if empty => __value: type
+      // output ++= " : "
+      // output ++= "String"
+      // output ++= (field.label match
+      //   case Some(s)  => " = " + s.toString()
+      //   case None     => "")
+
+      // output ++= ", "
+      
+      output ++= "$" + counter.toString()
       output ++= " : "
       output ++= transpiledType(field.value)
       counter+= 1
     }
-    context.output ++= ")"
+    context.output ++= ")\n"
 
   /** Writes the Scala declaration of `t`, which is a singleton, in `context`. */
   private def emitSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
@@ -162,10 +172,11 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     e match
       case symbols.Entity.Builtin(n, _) => s"alpine_rt.builtin.${n.identifier}"
       case symbols.Entity.Declaration(n, t) => scalaized(n) + discriminator(t)
-      case sef: symbols.Entity.Field => 
-        val index : Int = sef.index
-        val record : Type.Record = sef.whole
-        discriminator(record) + "." + record.fields(index).label.getOrElse("")+ "_L"  + index.toString
+      case _: symbols.Entity.Field => ???
+        //CHECK
+        //val index : Int = _.index
+        //val record : Type.Record = sef.whole
+        //"._V"  + (index+1).toString
 
 
   /** Returns a string representation of `n` suitable for use as a Scala identifier. */
@@ -256,13 +267,14 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     context.output ++= n.value
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
-    // TODO: suspicious function
-    context.output ++= n.identifier.drop(1)
+    // TODO: CHECK suspicious function
+    var counter: Int = 0
+    context.output ++= discriminator(n.tpe)
     context.output ++= "("
     context.output.appendCommaSeparated(n.fields) { (o, a) =>
-      o ++= a.label.getOrElse("_")
-      o ++= ", "
+      // o ++= "$" + counter.toString() + " = "
       a.value.visit(this)
+      counter+=1
     }
     context.output ++= ")"
 
