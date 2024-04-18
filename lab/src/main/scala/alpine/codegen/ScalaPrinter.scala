@@ -44,7 +44,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     context.output ++= discriminator(t)
     context.output ++= "("
     context.output.appendCommaSeparated(t.fields) { (output, field) =>
-      //Does #record_name(label1: type1, label2: type2) => case class record_name(label1: String = "label1", label_value1: type1, label2: String = "label2", label_value2: type2, ...)
+      //Does #record_name(label1: type1, label2: type2) => case class record_name($0: type0, $1: type1)
       //Add label as entry
       // output ++= "L_"  + counter.toString() // if empty => __value: type
       // output ++= " : "
@@ -265,17 +265,17 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
     // TODO: CHECK suspicious function
-    var counter: Int = 0
+    //registerUse
+    context.registerUse(n.tpe.asInstanceOf[Type.Record])
     context.output ++= discriminator(n.tpe)
     context.output ++= "("
     context.output.appendCommaSeparated(n.fields) { (o, a) =>
-      // o ++= "$" + counter.toString() + " = "
       a.value.visit(this)
-      counter+=1
+  
     }
     context.output ++= ")"
 
-    // record_name(label_identifier1, type1, label_identifier2, type2, ...)
+    // record_name(value1, value2, ...)
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     n.qualification.visit(this)
@@ -328,7 +328,16 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
 
   override def visitMatchCase(n: ast.Match.Case)(using context: Context): Unit = //Draft
     context.output ++= "case "
+
+    //will have to do the same for visitRecordPattern (remove val added due to binding)
+    val before = context.output.lastIndexOf("val")
     n.pattern.visit(this)
+    val after = context.output.lastIndexOf("val")
+
+    if (before != after) {
+      context.output.delete(after, after+4)
+    }
+
     context.output ++= " => "
     n.body.visit(this)
     context.output ++= "\n"
@@ -375,7 +384,6 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
       n: ast.AscribedExpression
   )(using context: Context): Unit =
     val castType = transpiledType(n.ascription.tpe)
-    //n.inner.visit(this)
 
     n.operation match {
       case Typecast.NarrowUnconditionally =>
