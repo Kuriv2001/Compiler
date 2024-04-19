@@ -392,9 +392,11 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
         context.output ++= ")"
 
       case Typecast.Narrow =>
-        context.output ++= s"alpine_rt.narrow[${castType}, ${castType}]("
-        n.inner.visit(this)
-        context.output ++= ", (x: ${castType}) => x, None)"
+        context.output ++= s"alpine_rt.narrow[${castType}, " 
+          n.inner.visit(this) 
+        context.output ++= s" => ${castType}]("
+          n.inner.visit(this)
+        context.output ++= s", (x: ${castType}) => x, None)"
         
       case Typecast.Widen => 
         // context.output ++= ".isInstanceOf[" + castType + "] "
@@ -433,7 +435,26 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     n.value.visit(this)
 
   override def visitRecordPattern(n: ast.RecordPattern)(using context: Context): Unit =
-    ???
+    context.registerUse(n.tpe.asInstanceOf[Type.Record])
+    context.output ++= discriminator(n.tpe)
+
+    if(!n.fields.isEmpty) {
+      context.output ++= "("
+      context.output.appendCommaSeparated(n.fields)((output, f) =>
+        
+        val before = context.output.lastIndexOf("val")
+        f.value.visit(this)
+        val after = context.output.lastIndexOf("val")
+
+        if (before != after) then context.output.delete(after, after+4))     
+      context.output ++= ")"
+    }
+      
+
+   
+
+
+
 
   override def visitWildcard(n: ast.Wildcard)(using context: Context): Unit =
     context.output ++= "_"
