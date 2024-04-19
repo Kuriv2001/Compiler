@@ -68,6 +68,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     //Use case object of scala
     context.output ++= "case object "
     context.output ++= discriminator(t)
+    context.output ++= "\n"
 
   /** Returns the transpiled form of `t`. */
   private def transpiledType(t: symbols.Type)(using context: Context): String =
