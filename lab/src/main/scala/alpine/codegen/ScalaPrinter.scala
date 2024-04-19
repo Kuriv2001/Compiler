@@ -392,6 +392,9 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
         context.output ++= ")"
 
       case Typecast.Narrow =>
+        context.output ++= s"alpine_rt.narrow[${castType}, ${castType}]("
+        n.inner.visit(this)
+        context.output ++= ", (x: ${castType}) => x, None)"
         
       case Typecast.Widen => 
         // context.output ++= ".isInstanceOf[" + castType + "] "
