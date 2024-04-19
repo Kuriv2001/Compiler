@@ -397,12 +397,13 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
         // emitRecord(Type.Record("#some", Nil))
 
         context.output ++= s"alpine_rt.narrow[${castType}, " 
-        context.output ++= transpiledType(n.inner.tpe)
+        context.output ++= transpiledType(Type.option(n.ascription.tpe))
         context.output ++= s"](" 
         n.inner.visit(this)
-        context.output ++= s", x => Rsome"
-        context.output ++= discriminator(n.ascription.tpe)
-        context.output ++= ", Rnone)"
+        context.output ++= s", x => "
+        context.output ++= discriminator(Type.some(n.ascription.tpe))
+        context.output ++= s"(x), " 
+        context.output ++= s"${discriminator(Type.none)})"
         
       case Typecast.Widen => 
         n.inner.visit(this)
