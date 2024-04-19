@@ -400,7 +400,9 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
         context.output ++= transpiledType(n.inner.tpe)
         context.output ++= s"](" 
         n.inner.visit(this)
-        context.output ++= s", x => Rsome, Rnone)"
+        context.output ++= s", x => Rsome"
+        context.output ++= discriminator(n.ascription.tpe)
+        context.output ++= ", Rnone)"
         
       case Typecast.Widen => 
         n.inner.visit(this)
