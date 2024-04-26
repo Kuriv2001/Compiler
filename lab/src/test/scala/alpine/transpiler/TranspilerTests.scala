@@ -8,6 +8,9 @@ class TranspilerTests extends munit.FunSuite:
   var runner: Option[TranspilerUtils.Runner] = None
   
   val inputFileAlpineTests = "./src/test/res/transpiler/test_cases.al"
+  
+  // Uncomment this line to run the codegen tests with the transpiler
+  // val inputFileAlpineTests2 = "./src/test/res/codegen/test_cases.al"
 
   /**
     * Parses the given file and run the obtained test cases
@@ -45,3 +48,6 @@ class TranspilerTests extends munit.FunSuite:
     runner.foreach(_.delete)
 
   runTestsFromFile(inputFileAlpineTests)
+  
+  // Uncomment this line to run the codegen tests with the transpiler
+  // runTestsFromFile(inputFileAlpineTests2)
