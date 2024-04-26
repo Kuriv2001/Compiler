@@ -13,3 +13,5 @@ lab/.vscode/settings.json
 lab01_interpreter/.metals/metals.log
 lab01_interpreter/.metals/metals.mv.db
 lab01_interpreter/.vscode/settings.json
+lab/output.wasm
+lab/output.wat

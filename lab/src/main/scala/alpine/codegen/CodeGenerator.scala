@@ -85,16 +85,24 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitIdentifier(n: Identifier)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitBooleanLiteral(n: BooleanLiteral)(using a: Context): Unit = ???
+  def visitBooleanLiteral(n: BooleanLiteral)(using a: Context): Unit = //Todo check bool really represented like this
+    val boolAsInt = if n.value == "true" then 1 else 0
+    a.output.append(IConst(boolAsInt).mkString)
 
   /** Visits `n` with state `a`. */
-  def visitIntegerLiteral(n: IntegerLiteral)(using a: Context): Unit = ???
+  def visitIntegerLiteral(n: IntegerLiteral)(using a: Context): Unit = //Todo Check
+    a.output.append(IConst(n.value.toInt).mkString)
 
   /** Visits `n` with state `a`. */
-  def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = ???
+  def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = //Todo Check
+    a.output.append(FConst(n.value.toFloat).mkString)
 
   /** Visits `n` with state `a`. */
   def visitStringLiteral(n: StringLiteral)(using a: Context): Unit = ???
+    // val bytes = n.value.getBytes("UTF-8")
+    // val allocateMemory = List(IConst(bytes.length), Call("allocate"))
+    // a.output.append(allocateMemory.mkString)
+
 
   /** Visits `n` with state `a`. */
   def visitRecord(n: Record)(using a: Context): Unit = ???
@@ -121,7 +129,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitMatchCase(n: Match.Case)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitLet(n: Let)(using a: Context): Unit = ???
+  def visitLet(n: Let)(using a: Context): Unit = ???//Todo need for others tried
 
   /** Visits `n` with state `a`. */
   def visitLambda(n: Lambda)(using a: Context): Unit = ???
