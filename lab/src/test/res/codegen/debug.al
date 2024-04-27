@@ -1,2 +1,2 @@
-//BEGIN Print 42.1 should print 42.1 (1pt)
-let main = print(42.1)
+//BEGIN Print 42 should print 42 (1pt)
+let main = print(42)

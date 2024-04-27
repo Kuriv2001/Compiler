@@ -6,6 +6,7 @@ import alpine.wasm.WasmTree._
 import alpine.ast._
 import alpine.wasm.Wasm
 import scala.collection.mutable
+import alpine.parsing.Token.Kind
 
 /** The transpilation of an Alpine program to Scala. */
 final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGenerator.Context, Unit]:
@@ -16,7 +17,12 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Returns a WebAssembly program equivalent to `syntax`. */
   /** THIS IS AN EXAMPLE MODULE! */
-  def compile(): Module = Module(
+
+  def compile(): Module = 
+    given a: Context = Context()
+    syntax.declarations.foreach(_.visit(this))
+    //a.typesToEmit.map(emitRecord)
+    Module(
     List(
       ImportFromModule("api", "print", "print", List(I32), None),
       ImportFromModule("api", "print", "fprint", List(F32), None),
@@ -24,46 +30,45 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
       ImportFromModule("api", "show-memory", "show-memory", List(I32), None),
       ImportMemory("api", "mem", 100)
     ),
-    List(
-      FunctionDefinition("heap-test", body =
-        List(
-          IConst(0),
-          IConst(0xdeadbeef),
-          IStore,
-          IConst(0),
-          Call("show-memory")
-        )
-      ),
-      FunctionDefinition("local-test", locals = List(F32, F32), returnType = Some(F32), body =
-        List(
-          FConst(3.14),
-          LocalSet(0),
-          FConst(1.67),
-          LocalSet(1),
-          LocalGet(0),
-          LocalGet(1),
-          FSub
-        )
-      ),
-      MainFunction(
-        List(
-          IConst(1),
-          IConst(2),
-          IAdd,
-          Call("print"),
-          Call("heap-test"),
-          Call("local-test"),
-          Call("fprint"),
-          IConst(0x41),
-          Call("print-char"),
+    a.functions) // Careful main should be last, is maybe first here!!
+    // List(
+    //   FunctionDefinition("heap-test", body =
+    //     List(
+    //       IConst(0),
+    //       IConst(0xdeadbeef),
+    //       IStore,
+    //       IConst(0),
+    //       Call("show-memory")
+    //     )
+    //   ),
+    //   FunctionDefinition("local-test", locals = List(F32, F32), returnType = Some(F32), body =
+    //     List(
+    //       FConst(3.14),
+    //       LocalSet(0),
+    //       FConst(1.67),
+    //       LocalSet(1),
+    //       LocalGet(0),
+    //       LocalGet(1),
+    //       FSub
+    //     )
+    //   ),
+    // MainFunction(
+    //   List(
+    //     IConst(1),
+    //     IConst(2),
+    //     IAdd,
+    //     Call("print"),
+    //     Call("heap-test"),
+    //     Call("local-test"),
+    //     Call("fprint"),
+    //     IConst(0x41),
+    //     Call("print-char"),
 
-          FConst(42) // Return
-        ),
-        Some(F32)
-      )
-    )
-  )
-
+    //     FConst(42) // Return
+    //   ),
+    //   Some(F32)
+    // )
+    
   // Tree visitor methods
 
   /** Visits `n` with state `a`. */
@@ -189,6 +194,9 @@ object CodeGenerator:
 
     /** The (partial) result of the transpilation. */
     def output: StringBuilder = _output
+
+    /** The (partial) result of the transpilation. */
+    var functions: List[alpine.wasm.WasmTree.Function] = List()
 
     /** `true` iff the transpiler is processing top-level symbols. */
     private var _isTopLevel = true
