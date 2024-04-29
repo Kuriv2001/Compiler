@@ -7,6 +7,7 @@ import alpine.ast._
 import alpine.wasm.Wasm
 import scala.collection.mutable
 import alpine.parsing.Token.Kind
+import scala.collection.mutable.ListBuffer
 
 /** The transpilation of an Alpine program to Scala. */
 final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGenerator.Context, Unit]:
@@ -75,7 +76,17 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitLabeled[T <: Tree](n: Labeled[T])(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitBinding(n: Binding)(using a: Context): Unit = ???
+  def visitBinding(n: Binding)(using a: Context): Unit = 
+    val TypeBinding = n.ascription match
+      case Some(ascription) => 
+        ascription match 
+          case _ => I32
+      case None => 
+        I32
+
+        
+    a.functions += FunctionDefinition(n.identifier, List(), List(), Some(TypeBinding), List())
+
 
   /** Visits `n` with state `a`. */
   def visitTypeDeclaration(n: TypeDeclaration)(using a: Context): Unit = ???
@@ -90,17 +101,29 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitIdentifier(n: Identifier)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitBooleanLiteral(n: BooleanLiteral)(using a: Context): Unit = //Todo check bool really represented like this
-    val boolAsInt = if n.value == "true" then 1 else 0
-    a.output.append(IConst(boolAsInt).mkString)
+  def visitBooleanLiteral(n: BooleanLiteral)(using a: Context): Unit = 
+    val boolAsString = if n.value == "true" then "1" else "0"
+    visitIntegerLiteral(IntegerLiteral(boolAsString, n.site))
 
   /** Visits `n` with state `a`. */
-  def visitIntegerLiteral(n: IntegerLiteral)(using a: Context): Unit = //Todo Check
-    a.output.append(IConst(n.value.toInt).mkString)
+  def visitIntegerLiteral(n: IntegerLiteral)(using a: Context): Unit = 
+    a.functions.head match
+      case FunctionDefinition(name, params, local, returnType, body) => 
+        a.functions(0) = FunctionDefinition(name, params, local, returnType, body :+ IConst(n.value.toInt))
+      case MainFunction(body, returnType) => 
+        a.functions(0) = MainFunction(body :+ IConst(n.value.toInt), returnType)
+      case _ =>
+        a.functions += MainFunction(List(IConst(n.value.toInt)), None)
 
   /** Visits `n` with state `a`. */
-  def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = //Todo Check
-    a.output.append(FConst(n.value.toFloat).mkString)
+  def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = 
+    a.functions.head match
+      case FunctionDefinition(name, params, local, returnType, body) => 
+        a.functions(0) = FunctionDefinition(name, params, local, returnType, body :+ FConst(n.value.toFloat))
+      case MainFunction(body, returnType) => 
+        a.functions(0) = MainFunction(body :+ FConst(n.value.toFloat), returnType)
+      case _ =>
+        a.functions += MainFunction(List(FConst(n.value.toFloat)), None)
 
   /** Visits `n` with state `a`. */
   def visitStringLiteral(n: StringLiteral)(using a: Context): Unit = ???
@@ -134,7 +157,9 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitMatchCase(n: Match.Case)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitLet(n: Let)(using a: Context): Unit = ???//Todo need for others tried
+  def visitLet(n: Let)(using a: Context): Unit =  //WHAAAT?
+    n.binding.visit(this)
+    n.body.visit(this)
 
   /** Visits `n` with state `a`. */
   def visitLambda(n: Lambda)(using a: Context): Unit = ???
@@ -196,7 +221,7 @@ object CodeGenerator:
     def output: StringBuilder = _output
 
     /** The (partial) result of the transpilation. */
-    var functions: List[alpine.wasm.WasmTree.Function] = List()
+    var functions: ListBuffer[alpine.wasm.WasmTree.Function] = ListBuffer()
 
     /** `true` iff the transpiler is processing top-level symbols. */
     private var _isTopLevel = true
