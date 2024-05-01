@@ -33,7 +33,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
       ImportFromModule("api", "show-memory", "show-memory", List(I32), None),
       ImportMemory("api", "mem", 100)
     ),
-    a.functions.map(x => x.asInstanceOf[wasm.WasmTree.Function]).toList) // Careful main should be last, is maybe first here!!
+    a.functions.map(x => x.asInstanceOf[wasm.WasmTree.Function]).toList) // Careful main should be last, is maybe first here!! 
     // List(
     //   FunctionDefinition("heap-test", body =
     //     List(
@@ -79,22 +79,32 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitBinding(n: Binding)(using a: Context): Unit = 
-    val TypeBinding = n.ascription match
-      case Some(ascription) => 
-        ascription match 
-          case _ => I32
-      case None => 
-        I32
-
+    if n.identifier == "main" then
+      val runList = a.runningInstructions.toList
+      a.functions.append(MainFunction(runList, None))
+      a.runningInstructions.clear()
+    else 
+      ??? //value?
+    //   val currentFunction = a.functions.last.asInstanceOf[wasm.WasmTree.Function]
+    //   currentFunction.body = a.functions.last.asInstanceOf[Function].body :+ IConst(n.expression.asInstanceOf[IntegerLiteral].value.toInt)
+    //   a.functions(0) = currentFunction
+    // val TypeBinding = n.ascription match
+    //   case Some(ascription) => 
+    //     ascription match 
+    //       case _ => I32
+    //   case None => 
+    //     I32
         
-    a.functions += FunctionDefinition(n.identifier, List(), List(), Some(TypeBinding), List())
+    // a.functions += FunctionDefinition(n.identifier, List(), List(), Some(TypeBinding), List())
 
 
   /** Visits `n` with state `a`. */
   def visitTypeDeclaration(n: TypeDeclaration)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitFunction(n: ast.Function)(using a: Context): Unit = ???
+  def visitFunction(n: ast.Function)(using a: Context): Unit = 
+    n.inputs.foreach(_.visit(this))
+    a.runningInstructions.append(Call(n.identifier))
 
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = ???
@@ -109,7 +119,18 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitIntegerLiteral(n: IntegerLiteral)(using a: Context): Unit = 
-    a.functions.append(IConst(n.value.toInt))
+    // a.functions.last match 
+    //   case MainFunction(_, _) => 
+    //     val lastFunction = a.functions.last.asInstanceOf[wasm.WasmTree.MainFunction]
+    //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
+    //     a.functions(0) = newFunction
+    //   case _ =>
+    //     val lastFunction = a.functions.last.asInstanceOf[wasm.WasmTree.FunctionDefinition]
+    //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
+    //     a.functions(a.functions.length - 1) = newFunction
+    a.runningInstructions.append(IConst(n.value.toInt))
+    
+    
 
   /** Visits `n` with state `a`. */
   def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = 
@@ -151,8 +172,8 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitLet(n: Let)(using a: Context): Unit =  //WHAAAT?
-    n.binding.visit(this)
     n.body.visit(this)
+    n.binding.visit(this)
     // let x = 4 -> variable
     // let main = print(42) -> function
     // We can implement it as a function call, if we have a variable we can store it in the stack
@@ -218,6 +239,8 @@ object CodeGenerator:
 
     /** The (partial) result of the transpilation. */
     var functions: ListBuffer[alpine.wasm.WasmTree.DepthFormattable] = ListBuffer()
+
+    var runningInstructions = ListBuffer[Instruction]()
 
     /** `true` iff the transpiler is processing top-level symbols. */
     private var _isTopLevel = true
