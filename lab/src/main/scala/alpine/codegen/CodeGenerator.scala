@@ -75,7 +75,8 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   // Tree visitor methods
 
   /** Visits `n` with state `a`. */
-  def visitLabeled[T <: Tree](n: Labeled[T])(using a: Context): Unit = ???
+  def visitLabeled[T <: Tree](n: Labeled[T])(using a: Context): Unit = 
+    n.value.visit(this)
 
   /** Visits `n` with state `a`. */
   def visitBinding(n: Binding)(using a: Context): Unit = 
@@ -103,7 +104,6 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
-    n.inputs.foreach(_.visit(this))
     a.runningInstructions.append(Call(n.identifier))
 
   /** Visits `n` with state `a`. */
@@ -129,8 +129,6 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
     //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
     //     a.functions(a.functions.length - 1) = newFunction
     a.runningInstructions.append(IConst(n.value.toInt))
-    
-    
 
   /** Visits `n` with state `a`. */
   def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = 
@@ -141,8 +139,6 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
     // val bytes = n.value.getBytes("UTF-8")
     // val allocateMemory = List(IConst(bytes.length), Call("allocate"))
     // a.output.append(allocateMemory.mkString)
-    
-
 
   /** Visits `n` with state `a`. */
   def visitRecord(n: Record)(using a: Context): Unit = ???
@@ -151,12 +147,15 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitSelection(n: Selection)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitApplication(n: Application)(using a: Context): Unit = ???
+  def visitApplication(n: Application)(using a: Context): Unit = 
+    n.arguments.foreach(_.visit(this))
+    n.function.visit(this)
     // Store arguments in the stack then call the function
     
-
   /** Visits `n` with state `a`. */
-  def visitPrefixApplication(n: PrefixApplication)(using a: Context): Unit = ???
+  def visitPrefixApplication(n: PrefixApplication)(using a: Context): Unit = 
+    a.runningInstructions.append(Call(n.function.value))
+    n.argument.visit(this)
 
   /** Visits `n` with state `a`. */
   def visitInfixApplication(n: InfixApplication)(using a: Context): Unit = ???
