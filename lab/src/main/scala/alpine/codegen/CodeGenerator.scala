@@ -104,7 +104,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
-    a.runningInstructions.append(Call(n.identifier))
+    a.functions.append(Call(n.identifier))
 
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = ???
@@ -128,7 +128,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
     //     val lastFunction = a.functions.last.asInstanceOf[wasm.WasmTree.FunctionDefinition]
     //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
     //     a.functions(a.functions.length - 1) = newFunction
-    a.runningInstructions.append(IConst(n.value.toInt))
+    a.functions.append(IConst(n.value.toInt))
 
   /** Visits `n` with state `a`. */
   def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = 
