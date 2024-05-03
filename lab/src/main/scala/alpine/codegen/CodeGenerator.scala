@@ -80,26 +80,41 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitBinding(n: Binding)(using a: Context): Unit = 
-    a.runningInstructions.clear()
-    n.initializer.get.visit(this)
-    if n.identifier == "main" then
-      val runList = a.runningInstructions.toList
-      a.functions.append(MainFunction(runList, None))
-      a.runningInstructions.clear()
-    else 
-      ??? //value?
-    //   val currentFunction = a.functions.last.asInstanceOf[wasm.WasmTree.Function]
-    //   currentFunction.body = a.functions.last.asInstanceOf[Function].body :+ IConst(n.expression.asInstanceOf[IntegerLiteral].value.toInt)
-    //   a.functions(0) = currentFunction
-    // val TypeBinding = n.ascription match
-    //   case Some(ascription) => 
-    //     ascription match 
-    //       case _ => I32
-    //   case None => 
-    //     I32
-        
-    // a.functions += FunctionDefinition(n.identifier, List(), List(), Some(TypeBinding), List())
+    if a.isTopLevel then
+      if n.identifier == "main" then
+        //Get what instructions have been run so far and store them in a MainFunction
+        n.initializer.get.visit(this)
+        a.functions.append(MainFunction(a.runningInstructions.toList, None))
+      else 
+        n.initializer match
+          case Some(initializer) => 
+            initializer match
+              case Application(f, args, site) =>
 
+              case Record(ident, fields, site) =>
+
+              case _ => //Variable/Literal
+                //If it is a global variable we need to store it in the memory
+                a.runningInstructions.append(IConst(a.storedGlobals.length))
+                initializer.visit(this)
+                a.runningInstructions.append(IStore)
+                a.storedGlobals.append(n.identifier)
+          case None => 
+            a.functions.append(Unreachable) 
+    else
+      n.initializer match
+          case Some(initializer) => 
+            initializer match
+              case Application(f, args, site) =>
+
+              case Record(ident, fields, site) =>
+
+              case _ => //Variable/Literal
+                initializer.visit(this)
+                a.runningInstructions.append(LocalSet(a.storedLocals.length))
+                a.storedLocals.append(n.identifier)
+          case None => 
+            a.functions.append(Unreachable)
 
   /** Visits `n` with state `a`. */
   def visitTypeDeclaration(n: TypeDeclaration)(using a: Context): Unit = ???
@@ -112,14 +127,38 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitParameter(n: Parameter)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitIdentifier(n: Identifier)(using a: Context): Unit =  //Draft
-    a.runningInstructions.last match 
-      case IConst(_) => 
-        a.runningInstructions.append(Call("print"))
-      case FConst(_) => 
-        a.runningInstructions.append(Call("fprint"))  
-      case _ => 
-        a.runningInstructions.append(Call("What"))
+  def visitIdentifier(n: Identifier)(using a: Context): Unit =  
+    if a.isTopLevel then
+      if a.storedGlobals.contains(n.value) then
+        a.runningInstructions.append(IConst(a.storedGlobals.indexOf(n.value)))
+        a.runningInstructions.append(ILoad)
+      else
+        n.value match
+        case "print" => 
+          a.runningInstructions.last match 
+          case IConst(_) => 
+            a.runningInstructions.append(Call("print"))
+          case FConst(_) => 
+            a.runningInstructions.append(Call("fprint"))  
+          case _ =>
+            a.runningInstructions.append(Call(n.value))
+        case _ =>
+          a.runningInstructions.append(Call(n.value)) 
+    else
+      if a.storedLocals.contains(n.value) then
+        a.runningInstructions.append(LocalGet(a.storedLocals.indexOf(n.value)))
+      else
+        n.value match
+          case "print" => 
+            a.runningInstructions.last match 
+            case IConst(_) => 
+              a.runningInstructions.append(Call("print"))
+            case FConst(_) => 
+              a.runningInstructions.append(Call("fprint"))  
+            case _ =>
+              a.runningInstructions.append(Call(n.value))
+          case _ =>
+            a.runningInstructions.append(Call(n.value))    
 
   /** Visits `n` with state `a`. */
   def visitBooleanLiteral(n: BooleanLiteral)(using a: Context): Unit = 
@@ -128,15 +167,6 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitIntegerLiteral(n: IntegerLiteral)(using a: Context): Unit = 
-    // a.functions.last match 
-    //   case MainFunction(_, _) => 
-    //     val lastFunction = a.functions.last.asInstanceOf[wasm.WasmTree.MainFunction]
-    //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
-    //     a.functions(0) = newFunction
-    //   case _ =>
-    //     val lastFunction = a.functions.last.asInstanceOf[wasm.WasmTree.FunctionDefinition]
-    //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
-    //     a.functions(a.functions.length - 1) = newFunction
     a.runningInstructions.append(IConst(n.value.toInt))
 
   /** Visits `n` with state `a`. */
@@ -179,7 +209,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitMatchCase(n: Match.Case)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitLet(n: Let)(using a: Context): Unit =  //WHAAAT?
+  def visitLet(n: Let)(using a: Context): Unit = //WHAAAT?
     n.body.visit(this)
     n.binding.visit(this)
     // let x = 4 -> variable
@@ -249,6 +279,10 @@ object CodeGenerator:
     var functions: ListBuffer[alpine.wasm.WasmTree.DepthFormattable] = ListBuffer()
 
     var runningInstructions = ListBuffer[Instruction]()
+
+    var storedLocals = ListBuffer[String]()
+
+    var storedGlobals = ListBuffer[String]()
 
     /** `true` iff the transpiler is processing top-level symbols. */
     private var _isTopLevel = true

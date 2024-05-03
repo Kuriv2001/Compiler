@@ -1,3 +1,5 @@
-//BEGIN Printing the content of a top level let should print the value (1pt)
-let x = 12
-let main = print(x)
+//BEGIN Printing the return value of a function with no arguments returning an integer should print the integer (1pt)
+fun f() -> Int {
+    42
+}
+let main = print(f())
