@@ -33,7 +33,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
       ImportFromModule("api", "show-memory", "show-memory", List(I32), None),
       ImportMemory("api", "mem", 100)
     ),
-    a.functions.map(x => x.asInstanceOf[wasm.WasmTree.Function]).toList) // Careful main should be last, is maybe first here!! 
+    a.functions.map(x => x.asInstanceOf[wasm.WasmTree.Function]).toList.reverse) // Careful main should be last, is maybe first here!! 
     // List(
     //   FunctionDefinition("heap-test", body =
     //     List(
@@ -122,26 +122,35 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
-    //Get output type
-    val outputType: Option[alpine.wasm.WasmTree.WasmType] = n.output match
-      case Some(output) =>
-        n.output.get.visit(this)
-        Option(a.functionCreateType.last)
-      case None => 
-        None
-    a.functionCreateType.clear()    
-    //Get input types => TODO implement so added
+    //Simple function start
     n.body.visit(this)
-    n.inputs.foreach(_.visit(this))
-    //n.genericParameters.foreach(_.visit(this))
     a.functions.append(
       FunctionDefinition(name = n.identifier, 
-                params = List(), //TODO
-                locals = a.storedLocalsTypes.toList, 
-                returnType = outputType,
-                body = a.runningInstructions.toList))
-    a.runningInstructions.clear()
-    a.storedLocals.clear()
+                          params = List(), //TODO
+                          locals = List(), 
+                          returnType = Option(I32), //TODO
+                          body = a.runningInstructions.toList)) //TODO
+    a.runningInstructions.clear()                      
+    // //Get output type
+    // val outputType: Option[alpine.wasm.WasmTree.WasmType] = n.output match
+    //   case Some(output) =>
+    //     n.output.get.visit(this)
+    //     Option(a.functionCreateType.last)
+    //   case None => 
+    //     None
+    // a.functionCreateType.clear()    
+    // //Get input types => TODO implement so added
+    // n.body.visit(this)
+    // n.inputs.foreach(_.visit(this))
+    // //n.genericParameters.foreach(_.visit(this))
+    // a.functions.append(
+    //   FunctionDefinition(name = n.identifier, 
+    //             params = List(), //TODO
+    //             locals = a.storedLocalsTypes.toList, 
+    //             returnType = outputType,
+    //             body = a.runningInstructions.toList))
+    // a.runningInstructions.clear()
+    // a.storedLocals.clear()
   
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = ???
