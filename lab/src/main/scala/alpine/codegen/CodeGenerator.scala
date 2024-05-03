@@ -80,6 +80,8 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitBinding(n: Binding)(using a: Context): Unit = 
+    a.runningInstructions.clear()
+    n.initializer.get.visit(this)
     if n.identifier == "main" then
       val runList = a.runningInstructions.toList
       a.functions.append(MainFunction(runList, None))
@@ -104,13 +106,20 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
-    a.functions.append(Call(n.identifier))
+    a.runningInstructions.append(Call(n.identifier))
 
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitIdentifier(n: Identifier)(using a: Context): Unit = ???
+  def visitIdentifier(n: Identifier)(using a: Context): Unit =  //Draft
+    a.runningInstructions.last match 
+      case IConst(_) => 
+        a.runningInstructions.append(Call("print"))
+      case FConst(_) => 
+        a.runningInstructions.append(Call("fprint"))  
+      case _ => 
+        a.runningInstructions.append(Call("What"))
 
   /** Visits `n` with state `a`. */
   def visitBooleanLiteral(n: BooleanLiteral)(using a: Context): Unit = 
@@ -128,11 +137,11 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
     //     val lastFunction = a.functions.last.asInstanceOf[wasm.WasmTree.FunctionDefinition]
     //     val newFunction = lastFunction.copy(body = lastFunction.body :+ IConst(n.value.toInt))
     //     a.functions(a.functions.length - 1) = newFunction
-    a.functions.append(IConst(n.value.toInt))
+    a.runningInstructions.append(IConst(n.value.toInt))
 
   /** Visits `n` with state `a`. */
   def visitFloatLiteral(n: FloatLiteral)(using a: Context): Unit = 
-    a.functions.append(FConst(n.value.toFloat))
+    a.runningInstructions.append(FConst(n.value.toFloat))
 
   /** Visits `n` with state `a`. */
   def visitStringLiteral(n: StringLiteral)(using a: Context): Unit = ???

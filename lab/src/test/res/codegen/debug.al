@@ -1,2 +1,3 @@
-//BEGIN Print 42 should print 42 (1pt)
-let main = print(42)
+//BEGIN Printing the content of a top level let should print the value (1pt)
+let x = 12
+let main = print(x)
