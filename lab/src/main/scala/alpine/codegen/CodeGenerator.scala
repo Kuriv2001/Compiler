@@ -122,14 +122,24 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
+    //Process input parameters
+    n.inputs.foreach(_.visit(this))
+    val inputTypes = a.functionCreateTypes.toList
+    val outputType = n.output match
+      case Some(output) =>
+        output.visit(this)
+        Some(a.functionCreateTypes.last)
+      case None => 
+        None
+    a.functionCreateTypes.clear()
     //Simple function start
     n.body.visit(this)
     a.functions.append(
       FunctionDefinition(name = n.identifier, 
-                          params = List(), //TODO
-                          locals = List(), 
-                          returnType = Option(I32), //TODO
-                          body = a.runningInstructions.toList)) //TODO
+                          params = inputTypes, 
+                          locals = List(), //TOdo wtf how to get
+                          returnType = outputType, 
+                          body = a.runningInstructions.toList)) 
     a.runningInstructions.clear()                      
     // //Get output type
     // val outputType: Option[alpine.wasm.WasmTree.WasmType] = n.output match
@@ -153,7 +163,17 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
     // a.storedLocals.clear()
   
   /** Visits `n` with state `a`. */
-  def visitParameter(n: Parameter)(using a: Context): Unit = ???
+  def visitParameter(n: Parameter)(using a: Context): Unit = 
+    // n.label match
+    //   case Some(label) => 
+    //     a.functionCreateLabels.append(label)
+    //   case None => 
+    //     a.functionCreateTypes.append(None)
+    n.ascription match
+      case Some(ascription) => 
+        ascription.visit(this)
+      case None => 
+        a.functionCreateTypes.append(I32) //TODO
 
   /** Visits `n` with state `a`. */
   def visitIdentifier(n: Identifier)(using a: Context): Unit =  
@@ -257,9 +277,9 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   /** Visits `n` with state `a`. */
   def visitTypeIdentifier(n: TypeIdentifier)(using a: Context): Unit = 
     n.value match
-      case "Int" => a.functionCreateType.append(I32)
-      case "Float" => a.functionCreateType.append(F32)
-      case _ => a.functionCreateType.append(I32) //TODO
+      case "Int" => a.functionCreateTypes.append(I32)
+      case "Float" => a.functionCreateTypes.append(F32)
+      case _ => a.functionCreateTypes.append(I32) //TODO edit
   /** Visits `n` with state `a`. */
   def visitRecordType(n: RecordType)(using a: Context): Unit = ???
 
@@ -317,7 +337,7 @@ object CodeGenerator:
 
     var storedGlobals = ListBuffer[String]()
 
-    var functionCreateType = ListBuffer[alpine.wasm.WasmTree.WasmType]()
+    var functionCreateTypes = ListBuffer[alpine.wasm.WasmTree.WasmType]()
 
     /** `true` iff the transpiler is processing top-level symbols. */
     private var _isTopLevel = true
