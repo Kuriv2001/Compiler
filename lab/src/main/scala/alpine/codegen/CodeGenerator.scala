@@ -113,6 +113,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
                 initializer.visit(this)
                 a.runningInstructions.append(LocalSet(a.storedLocals.length))
                 a.storedLocals.append(n.identifier)
+                a.storedLocalsTypes.append(I32) //TODO actual typees
           case None => 
             a.functions.append(Unreachable)
 
@@ -121,8 +122,27 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
 
   /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
-    a.runningInstructions.append(Call(n.identifier))
-
+    //Get output type
+    val outputType: Option[alpine.wasm.WasmTree.WasmType] = n.output match
+      case Some(output) =>
+        n.output.get.visit(this)
+        Option(a.functionCreateType.last)
+      case None => 
+        None
+    a.functionCreateType.clear()    
+    //Get input types => TODO implement so added
+    n.body.visit(this)
+    n.inputs.foreach(_.visit(this))
+    //n.genericParameters.foreach(_.visit(this))
+    a.functions.append(
+      FunctionDefinition(name = n.identifier, 
+                params = List(), //TODO
+                locals = a.storedLocalsTypes.toList, 
+                returnType = outputType,
+                body = a.runningInstructions.toList))
+    a.runningInstructions.clear()
+    a.storedLocals.clear()
+  
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = ???
 
@@ -226,8 +246,11 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitAscribedExpression(n: AscribedExpression)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
-  def visitTypeIdentifier(n: TypeIdentifier)(using a: Context): Unit = ???
-
+  def visitTypeIdentifier(n: TypeIdentifier)(using a: Context): Unit = 
+    n.value match
+      case "Int" => a.functionCreateType.append(I32)
+      case "Float" => a.functionCreateType.append(F32)
+      case _ => a.functionCreateType.append(I32) //TODO
   /** Visits `n` with state `a`. */
   def visitRecordType(n: RecordType)(using a: Context): Unit = ???
 
@@ -281,8 +304,11 @@ object CodeGenerator:
     var runningInstructions = ListBuffer[Instruction]()
 
     var storedLocals = ListBuffer[String]()
+    var storedLocalsTypes = ListBuffer[alpine.wasm.WasmTree.WasmType]()
 
     var storedGlobals = ListBuffer[String]()
+
+    var functionCreateType = ListBuffer[alpine.wasm.WasmTree.WasmType]()
 
     /** `true` iff the transpiler is processing top-level symbols. */
     private var _isTopLevel = true
