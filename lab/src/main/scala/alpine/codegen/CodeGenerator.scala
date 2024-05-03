@@ -141,26 +141,6 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
                           returnType = outputType, 
                           body = a.runningInstructions.toList)) 
     a.runningInstructions.clear()                      
-    // //Get output type
-    // val outputType: Option[alpine.wasm.WasmTree.WasmType] = n.output match
-    //   case Some(output) =>
-    //     n.output.get.visit(this)
-    //     Option(a.functionCreateType.last)
-    //   case None => 
-    //     None
-    // a.functionCreateType.clear()    
-    // //Get input types => TODO implement so added
-    // n.body.visit(this)
-    // n.inputs.foreach(_.visit(this))
-    // //n.genericParameters.foreach(_.visit(this))
-    // a.functions.append(
-    //   FunctionDefinition(name = n.identifier, 
-    //             params = List(), //TODO
-    //             locals = a.storedLocalsTypes.toList, 
-    //             returnType = outputType,
-    //             body = a.runningInstructions.toList))
-    // a.runningInstructions.clear()
-    // a.storedLocals.clear()
   
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = 
