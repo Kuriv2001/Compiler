@@ -1,5 +1,3 @@
-//BEGIN Printing the return value of a function with no arguments returning an integer should print the integer (1pt)
-fun f() -> Int {
-    42
-}
-let main = print(f())
+//BEGIN Printing a value in a record, indexed by index, should print the value (2pts)
+let r = #record(12.5, 42)
+let main = print(r.0)

@@ -141,6 +141,7 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
                           returnType = outputType, 
                           body = a.runningInstructions.toList)) 
     a.runningInstructions.clear()                      
+
   
   /** Visits `n` with state `a`. */
   def visitParameter(n: Parameter)(using a: Context): Unit = 
