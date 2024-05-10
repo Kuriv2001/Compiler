@@ -22,6 +22,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   /** Returns a Scala program equivalent to `syntax`. */
   def transpile(): String =
     given c: Context = Context()
+    c.output ++= "#include <stdio.h>"
+    c.output ++= "#include <stdio.h>"
+    c.output ++= "#include \"rt.h\""
     syntax.declarations.foreach(_.visit(this))
     c.typesToEmit.map(emitRecord)
     c.output.toString
@@ -132,7 +135,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   /** Returns a transpiled reference to `e`. */
   private def transpiledReferenceTo(e: symbols.Entity): String =
     e match
-      case symbols.Entity.Builtin(n, _) => s"alpine_rt.builtin.${n.identifier}"
+      case symbols.Entity.Builtin(n, _) => s"art_${n.identifier}"
       case symbols.Entity.Declaration(n, t) => scalaized(n) + discriminator(t)
       case _: symbols.Entity.Field => ???
 
