@@ -10,6 +10,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import alpine.symbols.Type
 import alpine.symbols.Type.Bool
+import scala.compiletime.ops.double
 
 /** The transpilation of an Alpine program to Scala. */
 final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Context, Unit]:
@@ -29,24 +30,25 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.typesToEmit.map(emitRecord)
     c.output.toString
 
-  /** Writes the Scala declaration of `t` in `context`. */
+  /** Writes the Scala declaration of `t` in `context`. */ 
   private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit =
     if t.fields.isEmpty then
       emitSingletonRecord(t)
     else
       emitNonSingletonRecord(t)
 
-  /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
+  /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */ //TODO done
   private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit = 
     //Handled labels as seperate entry (string) before value in case class
     //Use case class of scala
     var counter : Int = 0
     context.output ++= s"typedef struct ${discriminator(t)} {\n"
-    context.output.appendCommaSeparated(t.fields) { (output, field) =>
-      output ++= "var_" + counter.toString()
-      output ++= transpiledType(field.value)
+    context.output ++= s"char *discriminator;"
+    for field <- t.fields do
+      context.output ++= transpiledType(field.value)
+      context.output ++= " "
+      context.output ++= s"var_${counter.toString()};\n"
       counter+= 1
-    }
     context.output ++= "}\n\n"
   
     //TODO done
@@ -295,10 +297,33 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "\n}\n\n"
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit =
-    ???
+    context.output ++= "switch ("
+    n.scrutinee.visit(this)
+    context.output ++= ") {\n"
+    context.indentation += 1
+    val cases = n.cases
+
+    for c <- cases do
+      context.output ++= "  " * context.indentation
+      c.visit(this)
+
+    // Default case is optional, we could implement it later here.
+
+    context.indentation -= 1
+    context.output ++= "}\n"
 
   override def visitMatchCase(n: ast.Match.Case)(using context: Context): Unit =
-    ???
+    context.output ++= "case "
+
+    // We might need to delete the val from the binding like we did in ScalaPrinter.scala
+    n.pattern.visit(this)
+    context.output ++= ":\n"
+    context.indentation += 1
+    context.output ++= "  " * context.indentation
+    n.body.visit(this)
+    context.output ++= "\n"
+    context.output ++= "break ;\n"
+    context.indentation -= 1
 
   override def visitLet(n: ast.Let)(using context: Context): Unit =
     // Use a block to uphold lexical scoping.
