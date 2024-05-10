@@ -69,8 +69,8 @@ object TranspilerUtils:
     def run(input: Path): Either[ScalaRunError, String] =
       val absolutePaths = input.toAbsolutePath()
       val parent = absolutePaths.getParent()
-      val options = f"-classpath ${parent.toString}"
-      val (exitCode, output, stderr) = spawn(f"$scala $options $absolutePaths", ignoreStderr = true)
+      //val options = f"-classpath ${parent.toString}"
+      val (exitCode, output, stderr) = spawn(f"$gcc $absolutePaths", ignoreStderr = true)
       // 255 (-1) is reserved for panic
       if exitCode == 0 || exitCode == 255 then Right(output)
       else Left(ScalaRunError("Exit code: " ++ exitCode.toString ++ "\n" ++ output ++ "\n-- stderr --\n" ++ stderr))
