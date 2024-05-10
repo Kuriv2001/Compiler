@@ -53,11 +53,11 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   private def transpiledBuiltin(t: symbols.Type.Builtin)(using context: Context): String =
     t match
       case symbols.Type.BuiltinModule => throw Error(s"type '${t}' is not representable in Scala")
-      case symbols.Type.Bool => "Boolean"
-      case symbols.Type.Int => "Int"
-      case symbols.Type.Float => "Float"
-      case symbols.Type.String => "String"
-      case symbols.Type.Any => "Any"
+      case symbols.Type.Bool => "int"
+      case symbols.Type.Int => "int"
+      case symbols.Type.Float => "double"
+      case symbols.Type.String => "char *"
+      case symbols.Type.Any => "void *"//TODO pas sur
 
   /** Returns the transpiled form of `t`. */
   private def transpiledRecord(t: symbols.Type.Record)(using context: Context): String =
@@ -154,7 +154,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
       // If the is the entry point if it's called "main".
       if n.identifier == "main" then
-        context.output ++= "@main def $entry"
+        context.output ++= "int main(int argc, char *argv[]) {\n"//TODO remove
       else
         context.output ++= s"private val "
         context.output ++= transpiledReferenceTo(n.entityDeclared)
@@ -185,25 +185,27 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   override def visitTypeDeclaration(n: ast.TypeDeclaration)(using context: Context): Unit =
     unexpectedVisit(n)
 
+    //TODO done
   override def visitFunction(n: ast.Function)(using context: Context): Unit =
     context.output ++= "  " * context.indentation
-    context.output ++= "def "
+    context.output ++= transpiledType(symbols.Type.Arrow.from(n.tpe).get.output) //tu es la
+    context.output ++= " "
     context.output ++= transpiledReferenceTo(n.entityDeclared)
     context.output ++= "("
     context.output.appendCommaSeparated(n.inputs) { (o, a) =>
-      o ++= a.identifier
-      o ++= ": "
-      o ++= transpiledType(a.tpe)
+        o ++= transpiledType(a.tpe)
+        o ++= " "
+        o ++= a.identifier
     }
-    context.output ++= "): "
-    context.output ++= transpiledType(symbols.Type.Arrow.from(n.tpe).get.output)
-    context.output ++= " =\n"
-
+    context.output ++= ") {\n"
+ 
     context.indentation += 1
     context.output ++= "  " * context.indentation
     context.inScope((c) => n.body.visit(this)(using c))
-    context.output ++= "\n\n"
     context.indentation -= 1
+    context.output ++= "\n"
+    context.output ++= "  " * context.indentation
+    context.output ++= "}\n\n"
 
   override def visitParameter(n: ast.Parameter)(using context: Context): Unit =
     unexpectedVisit(n)
@@ -234,18 +236,21 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       case _ =>
         unexpectedVisit(n.selectee)
 
+        //TODO done
   override def visitApplication(n: ast.Application)(using context: Context): Unit =
     n.function.visit(this)
     context.output ++= "("
     context.output.appendCommaSeparated(n.arguments) { (o, a) => a.value.visit(this) }
     context.output ++= ")"
 
+    //TODO done
   override def visitPrefixApplication(n: ast.PrefixApplication)(using context: Context): Unit =
     n.function.visit(this)
     context.output ++= "("
     n.argument.visit(this)
     context.output ++= ")"
 
+    //TODO done
   override def visitInfixApplication(n: ast.InfixApplication)(using context: Context): Unit =
     n.function.visit(this)
     context.output ++= "("
@@ -254,13 +259,15 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     n.rhs.visit(this)
     context.output ++= ")"
 
+    //TODO done
   override def visitConditional(n: ast.Conditional)(using context: Context): Unit =
-    context.output ++= "if "
+    context.output ++= "if ("
     n.condition.visit(this)
-    context.output ++= " then "
+    context.output ++= ") {\n"
     n.successCase.visit(this)
-    context.output ++= " else "
+    context.output ++= "\n} else {\n"
     n.failureCase.visit(this)
+    context.output ++= "\n}\n"
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit =
     ???
