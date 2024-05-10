@@ -51,7 +51,7 @@ object TranspilerUtils:
     case class BackendError(exception: Throwable) extends Exception(exception):
       override def toString: String = f"Error from Alpine: \n$exception"
 
-    val tmpDir = Files.createTempDirectory("transpiler")
+    val tmpDir = Files.createTempDirectory("transpilerC")
 
     private val scalac = if System.getProperty("os.name").startsWith("Windows") then "where.exe scalac".!! else "scalac"
     private val scala = if System.getProperty("os.name").startsWith("Windows") then "where.exe scala".!! else "scala"
@@ -122,3 +122,6 @@ object TranspilerUtils:
 
     private def appendAlpineExtension(filename: String): String =
       if filename.endsWith(".al") then filename else f"$filename.al"
+
+    private def appendCExtension(filename: String): String =
+      if filename.endsWith(".c") then filename else f"$filename.c"  
