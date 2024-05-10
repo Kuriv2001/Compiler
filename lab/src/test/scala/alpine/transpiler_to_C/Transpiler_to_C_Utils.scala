@@ -68,12 +68,13 @@ object TranspilerUtils:
     /** Runs the given Scala file in the temporary directory */
     def run(input: Path): Either[ScalaRunError, String] =
       val absolutePaths = input.toAbsolutePath()
+      val absolutePathsOutput = input.resolveSibling(input.getFileName.toString.stripSuffix(".c") + ".o")
       val parent = absolutePaths.getParent()
       //val options = f"-classpath ${parent.toString}"
-      val (exitCode, output, stderr) = spawn(f"$gcc $absolutePaths", ignoreStderr = true)
+      val (exitCode, output, stderr) = spawn(f"$gcc $absolutePaths -o $absolutePathsOutput", ignoreStderr = true)
       // 255 (-1) is reserved for panic
       if exitCode == 0 || exitCode == 255 then Right(output)
-      else Left(ScalaRunError("Exit code: " ++ exitCode.toString ++ "\n" ++ output ++ "\n-- stderr --\n" ++ stderr))
+      else Left(ScalaRunError(stderr ++ "\n-- stderr --\n" ++ output))
 
 
     /**
