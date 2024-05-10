@@ -28,6 +28,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.output ++= "#include \"c_rt/rt.h\"\n"
     syntax.declarations.foreach(_.visit(this))
     c.typesToEmit.map(emitRecord)
+    c.output ++= "}"
     c.output.toString
 
   /** Writes the Scala declaration of `t` in `context`. */ 
