@@ -22,22 +22,43 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   /** Returns a Scala program equivalent to `syntax`. */
   def transpile(): String =
     given c: Context = Context()
-    c.output ++= "#include <stdio.h>"
-    c.output ++= "#include <stdio.h>"
-    c.output ++= "#include \"rt.h\""
+    c.output ++= "#include <stdio.h>\n"
+    c.output ++= "#include <stdio.h>\n"
+    c.output ++= "#include \"rt.h\"\n"
     syntax.declarations.foreach(_.visit(this))
     c.typesToEmit.map(emitRecord)
     c.output.toString
 
   /** Writes the Scala declaration of `t` in `context`. */
   private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit =
- 
-      ??? 
+    if t.fields.isEmpty then
+      emitSingletonRecord(t)
+    else
+      emitNonSingletonRecord(t)
 
   /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
-  private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit =
- 
-      ??? 
+  private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit = 
+    //Handled labels as seperate entry (string) before value in case class
+    //Use case class of scala
+    var counter : Int = 0
+    context.output ++= s"typedef struct ${discriminator(t)} {\n"
+    context.output.appendCommaSeparated(t.fields) { (output, field) =>
+      output ++= "var_" + counter.toString()
+      output ++= transpiledType(field.value)
+      counter+= 1
+    }
+    context.output ++= "}\n\n"
+  
+    //TODO done
+  private def emitSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit = 
+    val disc_t = discriminator(t)
+    context.output ++= s"typedef struct ${disc_t} {\n"
+    context.indentation += 1
+    context.output ++= " " * context.indentation
+    context.output ++= "char* discriminator;\n"
+    context.output ++= " " * context.indentation
+    context.output ++= s"} ${disc_t};\n\n"
+    context.indentation -= 1
 
   /** Returns the transpiled form of `t`. */
   private def transpiledType(t: symbols.Type)(using context: Context): String =
@@ -127,6 +148,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     b ++= discriminator(t.output)
     b.toString
 
+    //TODO done
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Sum): String =
     if t.members.isEmpty then "N" else
@@ -235,7 +257,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     n.qualification.visit(this)
     n.referredEntity match
       case Some(symbols.EntityReference(e: symbols.Entity.Field, _)) =>
-        context.output ++= ".$" + e.index
+        context.output ++= ".var_" + e.index
       case _ =>
         unexpectedVisit(n.selectee)
 
