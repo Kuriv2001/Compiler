@@ -30,14 +30,14 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.typesToEmit.map(emitRecord)
     c.output.toString
 
-  /** Writes the Scala declaration of `t` in `context`. */
+  /** Writes the Scala declaration of `t` in `context`. */ 
   private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit =
     if t.fields.isEmpty then
       emitSingletonRecord(t)
     else
       emitNonSingletonRecord(t)
 
-  /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */
+  /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */ //TODO done
   private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit = 
     //Handled labels as seperate entry (string) before value in case class
     //Use case class of scala
