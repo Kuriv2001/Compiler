@@ -49,13 +49,13 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
         transpiledSum(u)
       case _ => throw Error(s"type '${t}' is not representable in Scala")
 
-  /** Returns the transpiled form of `t`. */
+  /** Returns the transpiled form of `t`. */ //TODO done
   private def transpiledBuiltin(t: symbols.Type.Builtin)(using context: Context): String =
     t match
       case symbols.Type.BuiltinModule => throw Error(s"type '${t}' is not representable in Scala")
-      case symbols.Type.Bool => "int"
+      case symbols.Type.Bool => "int" //potential short
       case symbols.Type.Int => "int"
-      case symbols.Type.Float => "double"
+      case symbols.Type.Float => "float"
       case symbols.Type.String => "char *"
       case symbols.Type.Any => "void *"//TODO pas sur
 
@@ -267,7 +267,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     n.successCase.visit(this)
     context.output ++= "\n} else {\n"
     n.failureCase.visit(this)
-    context.output ++= "\n}\n"
+    context.output ++= "\n}\n\n"
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit =
     ???
