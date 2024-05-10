@@ -16,7 +16,7 @@ object TranspilerUtils:
     * @param input The lines of the input file, i.e., the alpine code
     * @param expected The expected lines of the std out when running the transpiled program
     */
-  case class TranspilerTest(name: String, input: List[String], expected: List[String])
+  case class TranspilerTest_to_C(name: String, input: List[String], expected: List[String])
 
   /**
     * Parses a file with the correct format and produces a list of TranspilerTest instances
@@ -24,7 +24,7 @@ object TranspilerUtils:
     * @param lines
     * @return
     */
-  def parseTests(lines: List[String]): List[TranspilerTest] = 
+  def parseTests(lines: List[String]): List[TranspilerTest_to_C] = 
     val indicesBeginningTests = lines.zipWithIndex.filter(p => p._1.startsWith("//BEGIN")).map(_._2)
     val indicesEndTests = lines.zipWithIndex.filter(p => p._1.startsWith("//END")).map(_._2 + 1)
     val boundsOfTests = indicesBeginningTests.zip(indicesEndTests)
@@ -37,7 +37,7 @@ object TranspilerUtils:
       println(f"name = '$name'")
       println(f"code = $code")
       println(f"out = $out")
-      TranspilerTest(name = name, input = code, expected = out)
+      TranspilerTest_to_C(name = name, input = code, expected = out)
     )
 
   
@@ -97,6 +97,7 @@ object TranspilerUtils:
     def compileLibrary(inputs: List[String]): Unit =
       val absolutePaths = inputs.map(filename => tmpDir.resolve(appendCExtension(filename))).mkString(" ")
       val absolutPathsOutput = inputs.map(filename => tmpDir.resolve(appendOExtension(filename))).mkString(" ")
+      print(f"$gcc -c $absolutePaths -o $absolutPathsOutput 12345")
       spawn(f"$gcc -c $absolutePaths -o $absolutPathsOutput", Some(tmpDir.toFile)) match
         case (0, _, _) => ()
         case (_, stdout, stderr) => throw ScalacCompileError("c_rt", stderr ++ "\n-- stderr --\n" ++ stdout)
