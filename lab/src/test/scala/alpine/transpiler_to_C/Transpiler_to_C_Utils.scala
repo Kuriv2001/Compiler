@@ -53,6 +53,7 @@ object TranspilerUtils:
 
     val tmpDir = Files.createTempDirectory("transpilerC")
 
+    private val gcc = "gcc"
     private val scalac = if System.getProperty("os.name").startsWith("Windows") then "where.exe scalac".!! else "scalac"
     private val scala = if System.getProperty("os.name").startsWith("Windows") then "where.exe scala".!! else "scala"
 
@@ -93,14 +94,15 @@ object TranspilerUtils:
 
     /** Compiles the given Scala files in the temporary directory */
     def compileLibrary(inputs: List[String]): Unit =
-      val absolutePaths = inputs.map(filename => tmpDir.resolve(appendScalaExtension(filename))).mkString(" ")
-      spawn(f"$scalac $absolutePaths", Some(tmpDir.toFile)) match
+      val absolutePaths = inputs.map(filename => tmpDir.resolve(appendCExtension(filename))).mkString(" ")
+      val absolutPathsOutput = inputs.map(filename => tmpDir.resolve(appendOExtension(filename))).mkString(" ")
+      spawn(f"$gcc -c $absolutePaths -o $absolutPathsOutput", Some(tmpDir.toFile)) match
         case (0, _, _) => ()
-        case (_, stdout, stderr) => throw ScalacCompileError("scala_rt", stderr ++ "\n-- stderr --\n" ++ stdout)
+        case (_, stdout, stderr) => throw ScalacCompileError("c_rt", stderr ++ "\n-- stderr --\n" ++ stdout)
 
     /** Writes a Scala file in the temporary directory. Prepends the .scala if needed extension */
     def writeScalaFile(name: String, content: String): Path =
-      val file = tmpDir.resolve(appendScalaExtension(name))
+      val file = tmpDir.resolve(appendCExtension(name))
       Files.write(file, content.getBytes)
       file
 
@@ -125,3 +127,6 @@ object TranspilerUtils:
 
     private def appendCExtension(filename: String): String =
       if filename.endsWith(".c") then filename else f"$filename.c"  
+
+    private def appendOExtension(filename: String): String =
+      if filename.endsWith(".o") then filename else f"$filename.o"  

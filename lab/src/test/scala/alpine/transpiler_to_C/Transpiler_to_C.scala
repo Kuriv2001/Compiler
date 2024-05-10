@@ -41,7 +41,7 @@ class TranspilerTests extends munit.FunSuite:
   override def beforeAll(): Unit =
     runner = Some(TranspilerUtils.Runner())
     // Setup-ing the standard library should be done here
-    runner.get.writeScalaFile("lib", scala.io.Source.fromFile("./c_rt/rt.scala").mkString)
+    runner.get.writeScalaFile("lib", scala.io.Source.fromFile("./c_rt/rt.c").mkString)
     runner.get.compileLibrary(List("lib"))
 
   override def afterAll(): Unit =
