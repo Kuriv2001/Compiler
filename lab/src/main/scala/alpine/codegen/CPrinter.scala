@@ -297,10 +297,33 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "\n}\n\n"
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit =
-    ???
+    context.output ++= "switch ("
+    n.scrutinee.visit(this)
+    context.output ++= ") {\n"
+    context.indentation += 1
+    val cases = n.cases
+
+    for c <- cases do
+      context.output ++= "  " * context.indentation
+      c.visit(this)
+
+    // Default case is optional, we could implement it later here.
+
+    context.indentation -= 1
+    context.output ++= "}\n"
 
   override def visitMatchCase(n: ast.Match.Case)(using context: Context): Unit =
-    ???
+    context.output ++= "case "
+
+    // We might need to delete the val from the binding like we did in ScalaPrinter.scala
+    n.pattern.visit(this)
+    context.output ++= ":\n"
+    context.indentation += 1
+    context.output ++= "  " * context.indentation
+    n.body.visit(this)
+    context.output ++= "\n"
+    context.output ++= "break ;\n"
+    context.indentation -= 1
 
   override def visitLet(n: ast.Let)(using context: Context): Unit =
     // Use a block to uphold lexical scoping.
