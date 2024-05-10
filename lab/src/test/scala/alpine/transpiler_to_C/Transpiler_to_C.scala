@@ -2,7 +2,7 @@ package alpine.transpiler
 
 import scala.io.Source
 
-class TranspilerTests extends munit.FunSuite:
+class TranspilerTests_to_C extends munit.FunSuite:
   private val lineSeparator = System.lineSeparator()
 
   var runner: Option[TranspilerUtils.Runner] = None
