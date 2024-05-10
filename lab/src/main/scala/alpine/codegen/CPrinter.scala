@@ -10,6 +10,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import alpine.symbols.Type
 import alpine.symbols.Type.Bool
+import scala.compiletime.ops.double
 
 /** The transpilation of an Alpine program to Scala. */
 final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Context, Unit]:
@@ -42,11 +43,12 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     //Use case class of scala
     var counter : Int = 0
     context.output ++= s"typedef struct ${discriminator(t)} {\n"
-    context.output.appendCommaSeparated(t.fields) { (output, field) =>
-      output ++= "var_" + counter.toString()
-      output ++= transpiledType(field.value)
+    context.output ++= s"char *discriminator;"
+    for field <- t.fields do
+      context.output ++= transpiledType(field.value)
+      context.output ++= " "
+      context.output ++= s"var_${counter.toString()};\n"
       counter+= 1
-    }
     context.output ++= "}\n\n"
   
     //TODO done
