@@ -27,7 +27,7 @@ class TranspilerTests_to_C extends munit.FunSuite:
         val alpineTestFilename = "Input.al"
         val inputAlpineFilePath = r.writeAlpineFile(alpineTestFilename, t.input.mkString(lineSeparator))
         val outputScalaFile = r.runAlpineTranspiler(inputAlpineFilePath)
-        val outputOfScala = outputScalaFile.flatMap(outputScalaFile => r.run(outputScalaFile).map(_.replace("\r\n", "\n")))
+        val outputOfScala = outputScalaFile.flatMap(outputScalaFile => r.run(outputScalaFile, List("lib")).map(_.replace("\r\n", "\n")))
         outputOfScala match {
           case Right(output) =>
             val expected = t.expected.mkString(lineSeparator)
@@ -41,7 +41,7 @@ class TranspilerTests_to_C extends munit.FunSuite:
   override def beforeAll(): Unit =
     runner = Some(TranspilerUtils.Runner())
     // Setup-ing the standard library should be done here
-    runner.get.writeScalaFile("lib", scala.io.Source.fromFile("./c_rt/rt.h").mkString)
+    runner.get.writeCFile("lib", scala.io.Source.fromFile("./c_rt/rt.c").mkString)
     runner.get.compileLibrary(List("lib"))
 
   override def afterAll(): Unit =

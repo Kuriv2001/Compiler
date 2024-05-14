@@ -66,12 +66,23 @@ object TranspilerUtils:
       (errorCode, output.toString, stderr.toString)
 
     /** Runs the given Scala file in the temporary directory */
-    def run(input: Path): Either[ScalaRunError, String] =
+    def run(input: Path, libPaths: List[String]): Either[ScalaRunError, String] =
+      val libPathO = libPaths.map(filename => tmpDir.resolve(appendOExtension(filename))).mkString(" ")
       val absolutePaths = input.toAbsolutePath()
       val absolutePathsOutput = input.resolveSibling(input.getFileName.toString.stripSuffix(".c") + ".o")
+      val absolutePathsOutputExecutable = input.resolveSibling(input.getFileName.toString.stripSuffix(".c"))
       val parent = absolutePaths.getParent()
       //val options = f"-classpath ${parent.toString}"
-      val (exitCode, output, stderr) = spawn(f"$gcc $absolutePaths -o $absolutePathsOutput", ignoreStderr = true)
+
+      spawn(f"$gcc -c $absolutePaths -o $absolutePathsOutput", ignoreStderr = true)
+      print("second:" + f"$gcc -c $absolutePaths -o $absolutePathsOutput \n")
+
+      spawn(f"$gcc $absolutePathsOutput $libPathO  -o $absolutePathsOutputExecutable", ignoreStderr = true)
+      print("third:" + f"$gcc $absolutePathsOutput $libPathO  -o $absolutePathsOutputExecutable \n")
+
+      print("fourth:" + f".$absolutePathsOutputExecutable \n")
+      val (exitCode, output, stderr) = spawn(f"$absolutePathsOutputExecutable", ignoreStderr = true)  
+     
       // 255 (-1) is reserved for panic
       if exitCode == 0 || exitCode == 255 then Right(output)
       else Left(ScalaRunError(stderr ++ "\n-- stderr --\n" ++ output))
@@ -89,24 +100,30 @@ object TranspilerUtils:
         val parsed = parsing.Parser(source).program()
         val typed = { val typer = typing.Typer(); typer.check(parsed) }
         val transpiled = codegen.CPrinter(typed).transpile()
-        Right(writeScalaFile("main", transpiled))
+        println("File transpiled to C: " + transpiled)
+        Right(writeCFile("main", transpiled))
       catch (e: Throwable) =>
         Left(BackendError(e))
 
     /** Compiles the given Scala files in the temporary directory */
     def compileLibrary(inputs: List[String]): Unit =
       val absolutePaths = inputs.map(filename => tmpDir.resolve(appendCExtension(filename))).mkString(" ")
-      val absolutPathsOutput = inputs.map(filename => tmpDir.resolve(appendOExtension(filename))).mkString(" ")
-      print(f"$gcc -c $absolutePaths -o $absolutPathsOutput 12345")
-      spawn(f"$gcc -c $absolutePaths -o $absolutPathsOutput", Some(tmpDir.toFile)) match
+      val absolutePathsOutput = inputs.map(filename => tmpDir.resolve(appendOExtension(filename))).mkString(" ")
+      print(f"first: $gcc -c $absolutePaths -o $absolutePathsOutput \n")
+      spawn(f"$gcc -c $absolutePaths -o $absolutePathsOutput", Some(tmpDir.toFile)) match
         case (0, _, _) => ()
         case (_, stdout, stderr) => throw ScalacCompileError("c_rt", stderr ++ "\n-- stderr --\n" ++ stdout)
 
     /** Writes a Scala file in the temporary directory. Prepends the .scala if needed extension */
-    def writeScalaFile(name: String, content: String): Path =
+    def writeCFile(name: String, content: String): Path =
       val file = tmpDir.resolve(appendCExtension(name))
       Files.write(file, content.getBytes)
       file
+
+    def writeHFile(name: String, content: String): Path =
+      val file = tmpDir.resolve(appendHExtension(name))
+      Files.write(file, content.getBytes)
+      file  
 
     /** Writes an Alpine file in the temporary directory. Prepends the .al if needed extension */
     def writeAlpineFile(name: String, content: String): Path =
@@ -131,4 +148,7 @@ object TranspilerUtils:
       if filename.endsWith(".c") then filename else f"$filename.c"  
 
     private def appendOExtension(filename: String): String =
-      if filename.endsWith(".o") then filename else f"$filename.o"  
+      if filename.endsWith(".o") then filename else f"$filename.o" 
+
+    private def appendHExtension(filename: String): String =
+      if filename.endsWith(".h") then filename else f"$filename.h"   

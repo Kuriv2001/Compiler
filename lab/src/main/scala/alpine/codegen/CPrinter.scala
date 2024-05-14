@@ -184,19 +184,19 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       if n.identifier == "main" then
         context.output ++= "int main(int argc, char *argv[]) {\n"//TODO remove
       else
-        context.output ++= s"private val "
+        
+        context.output ++= transpiledType(n.tpe)
+        context.output ++= " "
         context.output ++= transpiledReferenceTo(n.entityDeclared)
+        
+        // Top-level bindings must have an initializer.
+        assert(n.initializer.isDefined)
+        context.indentation += 1
+        context.output ++= " =\n"
 
-      context.output ++= ": "
-      context.output ++= transpiledType(n.tpe)
-
-      // Top-level bindings must have an initializer.
-      assert(n.initializer.isDefined)
-      context.indentation += 1
-      context.output ++= " =\n"
       context.output ++= "  " * context.indentation
       context.inScope((c) => n.initializer.get.visit(this)(using c))
-      context.output ++= "\n\n"
+      context.output ++= ";\n\n"
       context.indentation -= 1
 
     // Bindings at local-scope are used in let-bindings and pattern cases.
