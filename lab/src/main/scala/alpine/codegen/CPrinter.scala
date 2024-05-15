@@ -80,11 +80,11 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   private def transpiledBuiltin(t: symbols.Type.Builtin)(using context: Context): String =
     t match
       case symbols.Type.BuiltinModule => throw Error(s"type '${t}' is not representable in Scala")
-      case symbols.Type.Bool => "int" //potential short
-      case symbols.Type.Int => "int"
-      case symbols.Type.Float => "float"
-      case symbols.Type.String => "char *"
-      case symbols.Type.Any => "void *"//TODO pas sur
+      case symbols.Type.Bool => "ArtVariant" //potential short
+      case symbols.Type.Int => "ArtVariant"
+      case symbols.Type.Float => "ArtVariant"
+      case symbols.Type.String => "ArtVariant"
+      case symbols.Type.Any => "ArtVariant"//TODO pas sur
 
   /** Returns the transpiled form of `t`. */
   private def transpiledRecord(t: symbols.Type.Record)(using context: Context): String =
@@ -182,7 +182,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
       // If the is the entry point if it's called "main".
       if n.identifier == "main" then
-        context.output ++= "int main(int argc, char *argv[]) {\n"//TODO remove
+        context.output ++= "int main(int argc, char *argv[]) {\n"//TODO do what?
+        context.indentation += 1
       else
         
         context.output ++= transpiledType(n.tpe)
@@ -229,15 +230,10 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
  
     context.indentation += 1
     
-    n.body match
-      case _: ast.BooleanLiteral | _: ast.IntegerLiteral | _: ast.FloatLiteral | _: ast.StringLiteral =>
-        context.output ++= "  " * context.indentation
-        context.output ++= "art_print(" //TODO not all cases considered?
-        context.inScope((c) => n.body.visit(this)(using c))
-        context.output ++= ");\n"
-      case _ => 
-        context.output ++= "  " * context.indentation
-        context.inScope((c) => n.body.visit(this)(using c))  
+    context.output ++= "  " * context.indentation
+    context.output ++= "return  "
+    context.inScope((c) => n.body.visit(this)(using c))  
+    context.output ++= ";"
     
     context.indentation -= 1
     context.output ++= "\n"
@@ -251,16 +247,16 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= transpiledReferenceTo(n.referredEntity.get.entity)
 
   override def visitBooleanLiteral(n: ast.BooleanLiteral)(using context: Context): Unit =
-    context.output ++= n.value.toString
+    context.output ++= s"(ArtVariant){.type = BOOL, .value.b = $n.value}"
 
   override def visitIntegerLiteral(n: ast.IntegerLiteral)(using context: Context): Unit =
-    context.output ++= n.value.toString
+    context.output ++= s"(ArtVariant){.type = INT, .value.i = ${n.value}}"
 
   override def visitFloatLiteral(n: ast.FloatLiteral)(using context: Context): Unit =
-    context.output ++= n.value.toString ++ "f"
+    context.output ++= s"(ArtVariant){.type = FLOAT, .value.f = ${n.value}f}"
 
   override def visitStringLiteral(n: ast.StringLiteral)(using context: Context): Unit =
-    context.output ++= n.value
+    context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}}" //Add null character at the end of string maybe: \\u0000
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
     ???

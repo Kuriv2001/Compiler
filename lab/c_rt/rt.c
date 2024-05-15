@@ -2,8 +2,44 @@
 #include <stdlib.h>
 
 // Function declarations and definitions
+typedef enum {
+    INT,
+    FLOAT,
+    STRING,
+    BOOL
+} ArtType;
+
+typedef union {
+    int i;
+    float f;
+    char* s;
+    int b; // Represent boolean as int
+} ArtValue;
+
+typedef struct {
+    ArtType type;
+    ArtValue value;
+} ArtVariant;
+
 void art_panic() { printf("panic\n"); exit(-1); }
-void art_print(const void *s) { printf("%s", (const char *)s); }
+void art_print(ArtVariant v) {
+    switch (v.type) {
+        case INT:
+            printf("%d", v.value.i);
+            break;
+        case FLOAT:
+            printf("%f", v.value.f);
+            break;
+        case STRING:
+            printf("%s", v.value.s);
+            break;
+        case BOOL:
+            printf("%s", v.value.b ? "true" : "false");
+            break;
+        default:
+            printf("Unknown type");
+    }
+}
 int art_iadd(int a, int b) { return a + b; }
 int art_isub(int a, int b) { return a - b; }
 int art_imul(int a, int b) { return a * b; }
