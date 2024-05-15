@@ -34,9 +34,9 @@ object TranspilerUtils:
       val codeEndIndex = l.tail.indexWhere(s => s.startsWith("//OUT"))
       val code = l.tail.slice(0, codeEndIndex).filter(!_.isEmpty())
       val out = l.slice(l.indexWhere(_.startsWith("//OUT")), l.indexWhere(_.startsWith("//END"))).filter(!_.contains("//OUT"))
-      println(f"name = '$name'")
-      println(f"code = $code")
-      println(f"out = $out")
+      // println(f"name = '$name'")
+      // println(f"code = $code")
+      // println(f"out = $out")
       TranspilerTest_to_C(name = name, input = code, expected = out)
     )
 
@@ -75,12 +75,12 @@ object TranspilerUtils:
       //val options = f"-classpath ${parent.toString}"
 
       spawn(f"$gcc -c $absolutePaths -o $absolutePathsOutput", ignoreStderr = true)
-      print("second:" + f"$gcc -c $absolutePaths -o $absolutePathsOutput \n")
+      // print("second:" + f"$gcc -c $absolutePaths -o $absolutePathsOutput \n")
 
       spawn(f"$gcc $absolutePathsOutput $libPathO  -o $absolutePathsOutputExecutable", ignoreStderr = true)
-      print("third:" + f"$gcc $absolutePathsOutput $libPathO  -o $absolutePathsOutputExecutable \n")
+      // print("third:" + f"$gcc $absolutePathsOutput $libPathO  -o $absolutePathsOutputExecutable \n")
 
-      print("fourth:" + f".$absolutePathsOutputExecutable \n")
+      // print("fourth:" + f".$absolutePathsOutputExecutable \n")
       val (exitCode, output, stderr) = spawn(f"$absolutePathsOutputExecutable", ignoreStderr = true)  
      
       // 255 (-1) is reserved for panic
@@ -109,7 +109,7 @@ object TranspilerUtils:
     def compileLibrary(inputs: List[String]): Unit =
       val absolutePaths = inputs.map(filename => tmpDir.resolve(appendCExtension(filename))).mkString(" ")
       val absolutePathsOutput = inputs.map(filename => tmpDir.resolve(appendOExtension(filename))).mkString(" ")
-      print(f"first: $gcc -c $absolutePaths -o $absolutePathsOutput \n")
+      // print(f"first: $gcc -c $absolutePaths -o $absolutePathsOutput \n")
       spawn(f"$gcc -c $absolutePaths -o $absolutePathsOutput", Some(tmpDir.toFile)) match
         case (0, _, _) => ()
         case (_, stdout, stderr) => throw ScalacCompileError("c_rt", stderr ++ "\n-- stderr --\n" ++ stdout)
