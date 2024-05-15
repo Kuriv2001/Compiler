@@ -100,6 +100,7 @@ object TranspilerUtils:
         val parsed = parsing.Parser(source).program()
         val typed = { val typer = typing.Typer(); typer.check(parsed) }
         val transpiled = codegen.CPrinter(typed).transpile()
+        println("From test: " + inputFile)
         println("File transpiled to C: " + transpiled)
         Right(writeCFile("main", transpiled))
       catch (e: Throwable) =>
