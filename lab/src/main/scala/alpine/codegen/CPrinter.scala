@@ -216,11 +216,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     //TODO done
   override def visitFunction(n: ast.Function)(using context: Context): Unit =
     context.output ++= "  " * context.indentation
-    n.body match
-      case _: ast.BooleanLiteral | _: ast.IntegerLiteral | _: ast.FloatLiteral | _: ast.StringLiteral =>
-        context.output ++= "void" //When just printing with one value
-      case _ => 
-        context.output ++= transpiledType(symbols.Type.Arrow.from(n.tpe).get.output) //tu es la
+    context.output ++= transpiledType(symbols.Type.Arrow.from(n.tpe).get.output) //tu es la
     context.output ++= " "
     context.output ++= transpiledReferenceTo(n.entityDeclared)
     context.output ++= "("
