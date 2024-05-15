@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Function declarations and definitions
+//For Literal
 typedef enum {
     INT,
     FLOAT,
@@ -14,12 +14,46 @@ typedef union {
     float f;
     char* s;
     int b; // Represent boolean as int
+    void * record;
 } ArtValue;
 
 typedef struct {
     ArtType type;
     ArtValue value;
 } ArtVariant;
+
+//For Records
+
+typedef struct {
+    ArtType type;
+    char* label;
+    ArtValue value;
+} ArtRecordField;
+
+typedef struct {
+    char* name;
+    size_t field_count;
+    ArtRecordField * fields;
+} ArtRecord;
+
+ArtRecordField create_field(const char* label, ArtType type, ArtValue value) {
+    ArtRecordField field;
+    field.label = (char*)label;
+    field.type = type;
+    field.value = value;
+    return field;
+}
+
+ArtRecord create_record(const char* name, size_t field_count) {
+    ArtRecord record;
+    record.name = (char*)name; 
+    record.field_count = field_count;
+    return record;
+}
+
+void add_field_to_record(ArtRecord* record, size_t index, ArtRecordField field) {
+    record->fields[index] = field;
+}
 
 void art_panic() { printf("panic\n"); exit(-1); }
 void art_print(ArtVariant v) {

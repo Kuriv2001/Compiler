@@ -140,7 +140,12 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Record): String =
-    ???
+    val b = StringBuilder("R")
+    b ++= t.identifier.drop(1)
+    for f <- t.fields do
+      b ++= f.label.getOrElse("")
+      b ++= discriminator(f.value)
+    b.toString
 
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Arrow): String =
@@ -202,7 +207,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
     // Bindings at local-scope are used in let-bindings and pattern cases.
     else
-      context.output ++= s"val "
+      // context.output ++= s"val "
       context.output ++= transpiledReferenceTo(n.entityDeclared)
       context.output ++= ": "
       context.output ++= transpiledType(n.tpe)
@@ -259,7 +264,44 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}}" //Add null character at the end of string maybe: \\u0000
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
-    ???
+    context.output ++= "{\n"
+    context.indentation += 1
+    context.output ++= "  " * context.indentation
+
+    var nFields = 0
+    for f <- n.fields do
+      context.output ++= "ArtRecordField "
+      context.output ++= s"field_${nFields.toString()} "
+      context.output ++= " = "
+      nFields = nFields + 1
+      context.output ++= "create_field( "
+      val label = f.label.getOrElse("?")
+      context.output ++= label
+      context.output ++= ", "
+      f.value.visit(this)
+      context.output ++= " );\n"
+
+    context.output ++= "ArtRecord "
+    context.output ++= s"record_${n.identifier} "
+    context.output ++= " = "
+    context.output ++= "create_record("
+    context.output ++= s"${discriminator(n.tpe)}" 
+    context.output ++= ", "
+    context.output ++= s"${nFields}"
+    context.output ++= ");\n" 
+
+    val j = 0
+    for f <- n.fields do
+      context.output ++= "add_field_to_record("
+      context.output ++= s"record_${n.identifier}"
+      context.output ++= ", "
+      context.output ++= s"${j.toString()}"
+      context.output ++= ", "
+      context.output ++= s"field_${j.toString()}"
+      context.output ++= ");\n"
+
+      context.indentation -= 1
+
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     n.qualification.visit(this)
