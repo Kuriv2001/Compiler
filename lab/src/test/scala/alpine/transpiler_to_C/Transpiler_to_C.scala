@@ -42,6 +42,7 @@ class TranspilerTests_to_C extends munit.FunSuite:
     runner = Some(TranspilerUtils.Runner())
     // Setup-ing the standard library should be done here
     runner.get.writeCFile("lib", scala.io.Source.fromFile("./c_rt/rt.c").mkString)
+    runner.get.writeHFile("lib", scala.io.Source.fromFile("./c_rt/rt.h").mkString)
     runner.get.compileLibrary(List("lib"))
 
   override def afterAll(): Unit =

@@ -25,7 +25,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     given c: Context = Context()
     c.output ++= "#include <stdio.h>\n"
     c.output ++= "#include <stdio.h>\n"
-    c.output ++= "#include \"lib.c\"\n"
+    c.output ++= "#include \"lib.h\"\n"
     syntax.declarations.foreach(_.visit(this))
     c.typesToEmit.map(emitRecord)
     c.output ++= "}"
