@@ -28,6 +28,12 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.output ++= "#include \"lib.h\"\n"
     syntax.declarations.foreach(_.visit(this))
     c.typesToEmit.map(emitRecord)
+    //Free all the strings
+    for record <- c.recordsToFree do
+      c.output ++= "free_record("
+      c.output ++= record
+      c.output ++= ");\n"
+    //Close it  
     c.output ++= "}"
     c.output.toString
 
@@ -268,19 +274,21 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.indentation += 1
     context.output ++= "  " * context.indentation
 
+    // Create fields of record
     var nFields = 0
     for f <- n.fields do
       context.output ++= "ArtRecordField "
-      context.output ++= s"field_${nFields.toString()} "
+      context.output ++= s"${discriminator(f.value.tpe)} "
       context.output ++= " = "
       nFields = nFields + 1
       context.output ++= "create_field( "
-      val label = f.label.getOrElse("?")
+      val label = f.label.getOrElse("_")
       context.output ++= label
       context.output ++= ", "
       f.value.visit(this)
       context.output ++= " );\n"
 
+    // Create record
     context.output ++= "ArtRecord "
     context.output ++= s"record_${n.identifier} "
     context.output ++= " = "
@@ -290,6 +298,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= s"${nFields}"
     context.output ++= ");\n" 
 
+    // Add fields to record
     val j = 0
     for f <- n.fields do
       context.output ++= "add_field_to_record("
@@ -299,6 +308,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       context.output ++= ", "
       context.output ++= s"field_${j.toString()}"
       context.output ++= ");\n"
+
+    context.output ++= s"return record_${n.identifier}"  
+    context.output ++= "}"
 
       context.indentation -= 1
 
@@ -482,6 +494,10 @@ object CPrinter:
       var tl = _isTopLevel
       _isTopLevel = false
       try action(this) finally _isTopLevel = tl
+
+    /** Stores the records, that have to be freed in the end of the program. */
+    var recordsToFree = mutable.Set[String]()
+
 
   end Context
 

@@ -32,12 +32,14 @@ typedef struct {
 typedef struct {
     char* name;
     size_t field_count;
-    ArtRecordField* fields;
+    ArtRecordField *fields;
 } ArtRecord;
 
-ArtRecordField create_field(const char* label, ArtType type, ArtValue value);
-ArtRecord create_record(const char* name, size_t field_count);
+ArtRecordField create_field(const char* label, ArtVariant variant);
+ArtRecord* create_record(const char* name, size_t field_count);
 void add_field_to_record(ArtRecord* record, size_t index, ArtRecordField field);
+void free_field(ArtRecordField* field);
+void free_record(ArtRecord* record);
 
 void art_panic();
 void art_print(ArtVariant v);
