@@ -270,11 +270,16 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}}" //Add null character at the end of string maybe: \\u0000
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
-    context.output ++= "{\n"
-    context.indentation += 1
-    
 
-    // Create fields of record
+    //Create Record
+    context.output ++= "create_record("
+    context.output ++= s"${discriminator(n.tpe)}" 
+    context.output ++= ", "
+    val numFields = n.fields.size
+    context.output ++= s"${numFields}"
+    context.output ++= ");\n" 
+
+    //Create fields
     var nFields = 0
     for f <- n.fields do
       context.output ++= "  " * context.indentation
@@ -289,42 +294,77 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       f.value.visit(this)
       context.output ++= " );\n"
 
-    // Create record
-    context.output ++= "  " * context.indentation
-    context.recordsToFree += s"record_${n.identifier}"
-    context.output ++= "ArtRecord "
-    context.output ++= s"record_${n.identifier} "
-    context.output ++= " = "
-    context.output ++= "create_record("
-    context.output ++= s"${discriminator(n.tpe)}" 
-    context.output ++= ", "
-    context.output ++= s"${nFields}"
-    context.output ++= ");\n" 
-
-    // Add fields to record
-    val j = 0
+    //Add fields to record
+    nFields = 0
     for f <- n.fields do
       context.output ++= "  " * context.indentation
       context.output ++= "add_field_to_record("
       context.output ++= s"record_${n.identifier}"
       context.output ++= ", "
-      context.output ++= s"${j.toString()}"
+      context.output ++= s"${nFields.toString()}"
       context.output ++= ", "
-      context.output ++= s"field_${j.toString()}"
-      context.output ++= ");\n"
+      context.output ++= s"field_${nFields.toString()}"
+      if nFields != numFields - 1 then
+        context.output ++= ");\n"
+      else
+        context.output ++= ")" 
+      nFields = nFields + 1
 
-    context.output ++= "  " * context.indentation
-    context.output ++= s"return record_${n.identifier};"  
-    context.output ++= "\n}"
+    
+    //---------------
+    // // Create fields of record
+    // var nFields = 0
+    // for f <- n.fields do
+    //   context.output ++= "  " * context.indentation
+    //   context.output ++= "ArtRecordField "
+    //   context.output ++= s"${discriminator(f.value.tpe)} "
+    //   context.output ++= " = "
+    //   nFields = nFields + 1
+    //   context.output ++= "create_field( "
+    //   val label = f.label.getOrElse("_")
+    //   context.output ++= label
+    //   context.output ++= ", "
+    //   f.value.visit(this)
+    //   context.output ++= " );\n"
 
-      context.indentation -= 1
+
+
+    // // Create record
+    // context.output ++= "  " * context.indentation
+    // context.recordsToFree += s"record_${n.identifier}"
+    // context.output ++= "ArtRecord "
+    // context.output ++= s"record_${n.identifier} "
+    // context.output ++= " = "
+    // context.output ++= "create_record("
+    // context.output ++= s"${discriminator(n.tpe)}" 
+    // context.output ++= ", "
+    // context.output ++= s"${nFields}"
+    // context.output ++= ");\n" 
+
+    // // Add fields to record
+    // val j = 0
+    // for f <- n.fields do
+    //   context.output ++= "  " * context.indentation
+    //   context.output ++= "add_field_to_record("
+    //   context.output ++= s"record_${n.identifier}"
+    //   context.output ++= ", "
+    //   context.output ++= s"${j.toString()}"
+    //   context.output ++= ", "
+    //   context.output ++= s"field_${j.toString()}"
+    //   context.output ++= ");\n"
+
+    // context.output ++= "  " * context.indentation
+    // context.output ++= s"return record_${n.identifier};"  
+    // context.output ++= "\n}"
+
+    //   context.indentation -= 1
 
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     n.qualification.visit(this)
     n.referredEntity match
       case Some(symbols.EntityReference(e: symbols.Entity.Field, _)) =>
-        context.output ++= ".var_" + e.index
+        context.output ++= ".field_" + e.index
       case _ =>
         unexpectedVisit(n.selectee)
 
