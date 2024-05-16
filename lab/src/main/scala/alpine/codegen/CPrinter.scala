@@ -272,11 +272,12 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
     context.output ++= "{\n"
     context.indentation += 1
-    context.output ++= "  " * context.indentation
+    
 
     // Create fields of record
     var nFields = 0
     for f <- n.fields do
+      context.output ++= "  " * context.indentation
       context.output ++= "ArtRecordField "
       context.output ++= s"${discriminator(f.value.tpe)} "
       context.output ++= " = "
@@ -289,6 +290,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       context.output ++= " );\n"
 
     // Create record
+    context.output ++= "  " * context.indentation
+    context.recordsToFree += s"record_${n.identifier}"
     context.output ++= "ArtRecord "
     context.output ++= s"record_${n.identifier} "
     context.output ++= " = "
@@ -301,6 +304,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     // Add fields to record
     val j = 0
     for f <- n.fields do
+      context.output ++= "  " * context.indentation
       context.output ++= "add_field_to_record("
       context.output ++= s"record_${n.identifier}"
       context.output ++= ", "
@@ -309,8 +313,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       context.output ++= s"field_${j.toString()}"
       context.output ++= ");\n"
 
-    context.output ++= s"return record_${n.identifier}"  
-    context.output ++= "}"
+    context.output ++= "  " * context.indentation
+    context.output ++= s"return record_${n.identifier};"  
+    context.output ++= "\n}"
 
       context.indentation -= 1
 
