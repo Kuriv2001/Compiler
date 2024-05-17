@@ -262,16 +262,16 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= transpiledReferenceTo(n.referredEntity.get.entity)
 
   override def visitBooleanLiteral(n: ast.BooleanLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = BOOL, .value.b = $n.value}"
+    context.output ++= s"(ArtVariant){.type = BOOL, .value.b = $n.value, .value.label = \"\"}"
 
   override def visitIntegerLiteral(n: ast.IntegerLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = INT, .value.i = ${n.value}}"
+    context.output ++= s"(ArtVariant){.type = INT, .value.i = ${n.value}, .value.label = \"\"}"
 
   override def visitFloatLiteral(n: ast.FloatLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = FLOAT, .value.f = ${n.value}f}"
+    context.output ++= s"(ArtVariant){.type = FLOAT, .value.f = ${n.value}f, .value.label = \"\"}"
 
   override def visitStringLiteral(n: ast.StringLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}}" //Add null character at the end of string maybe: \\u0000
+    context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}, .value.label = \"\"}"
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
 
@@ -279,108 +279,35 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= s"create_record_${n.identifier}{\n"
 
     context.indentation += 1
+
+    //Init record
     context.output ++= "  " * context.indentation
-    context.output ++= "
+    context.output ++= "ArtVariant tempRecord;\n"
+    context.output ++= "  " * context.indentation
+    context.output ++= s"init_record(&tempRecord, ${n.fields.size}, \"${n.identifier}\");\n"
 
-    // //Create Record
-    // context.output ++= "  " * context.indentation
-    // context.output ++= "create_record("
-    // context.output ++= s"${discriminator(n.tpe)}" 
-    // context.output ++= ", "
-    // val numFields = n.fields.size
-    // context.output ++= s"${numFields}"
-    // context.output ++= ");\n" 
+    //Add fields to record
+    var idxFields = 0
+    for field <- n.fields do
+      context.output ++= "  " * context.indentation
+      context.output ++= s"add_field_to_record(&tempRecord, ${idxFields}, ${field.label.getOrElse("_")}, type,"
+      field.value.visit(this)
+      context.output ++= "};\n"
+      idxFields += 1
 
-    // //Create fields
-    // var nFields = 0
-    // for f <- n.fields do
-    //   context.output ++= "  " * context.indentation
-    //   context.output ++= "ArtRecordField "
-    //   context.output ++= s"${discriminator(f.value.tpe)} "
-    //   context.output ++= " = "
-    //   nFields = nFields + 1
-    //   context.output ++= "create_field( "
-    //   val label = f.label.getOrElse("_")
-    //   context.output ++= label
-    //   context.output ++= ", "
-    //   f.value.visit(this)
-    //   context.output ++= " );\n"
-
-    // //Add fields to record
-    // nFields = 0
-    // for f <- n.fields do
-    //   context.output ++= "  " * context.indentation
-    //   context.output ++= "add_field_to_record("
-    //   context.output ++= s"record_${n.identifier}"
-    //   context.output ++= ", "
-    //   context.output ++= s"${nFields.toString()}"
-    //   context.output ++= ", "
-    //   context.output ++= s"field_${nFields.toString()}"
-    //   if nFields != numFields - 1 then
-    //     context.output ++= ");\n"
-    //   else
-    //     context.output ++= ")" 
-    //   nFields = nFields + 1
-
-    //   //Finish up function
-    // context.output ++= "\n"
-    // context.output ++= "  " * context.indentation
-    // context.output ++= s"return record_${n.identifier};"
-    // context.output ++= "\n}"
-    // context.recordsToCreate += s"${n.identifier}"
-    
-    // //---------------
-    // // // Create fields of record
-    // // var nFields = 0
-    // // for f <- n.fields do
-    // //   context.output ++= "  " * context.indentation
-    // //   context.output ++= "ArtRecordField "
-    // //   context.output ++= s"${discriminator(f.value.tpe)} "
-    // //   context.output ++= " = "
-    // //   nFields = nFields + 1
-    // //   context.output ++= "create_field( "
-    // //   val label = f.label.getOrElse("_")
-    // //   context.output ++= label
-    //   context.output ++= ", "
-    //   f.value.visit(this)
-    //   context.output ++= " );\n"
-
-
-
-    // // Create record
-    // context.output ++= "  " * context.indentation
-    // context.recordsToFree += s"record_${n.identifier}"
-    // context.output ++= "ArtRecord "
-    // context.output ++= s"record_${n.identifier} "
-    // context.output ++= " = "
-    // context.output ++= "create_record("
-    // context.output ++= s"${discriminator(n.tpe)}" 
-    // context.output ++= ", "
-    // context.output ++= s"${nFields}"
-    // context.output ++= ");\n" 
-
-    // // Add fields to record
-    // val j = 0
-    // for f <- n.fields do
-    //   context.output ++= "  " * context.indentation
-    //   context.output ++= "add_field_to_record("
-    //   context.output ++= s"record_${n.identifier}"
-    //   context.output ++= ", "
-    //   context.output ++= s"${j.toString()}"
-    //   context.output ++= ", "
-    //   context.output ++= s"field_${j.toString()}"
-    //   context.output ++= ");\n"
-
-    // context.output ++= "  " * context.indentation
-    // context.output ++= s"return record_${n.identifier};"  
-    // context.output ++= "\n}"
-
-    //   context.indentation -= 1
-
+    //Return the record
+    context.output ++= "  " * context.indentation
+    context.output ++= "return tempRecord;\n"
+    context.indentation -= 1
+    context.output ++= "}\n\n"
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     n.qualification.visit(this)
     n.referredEntity match
+      // case Some(symbols.EntityReference(e: symbols.Entity.Record, _)) => TODO
+      //   context.output ++= "->fields["
+      //   context.output ++= e.index
+      //   context.output ++= "]"
       case Some(symbols.EntityReference(e: symbols.Entity.Field, _)) =>
         context.output ++= ".field_" + e.index
       case _ =>

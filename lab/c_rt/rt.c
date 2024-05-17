@@ -8,9 +8,10 @@ void art_panic() {
     exit(-1); 
 }
 
-void init_record(ArtVariant *record) {
+void init_record(ArtVariant *record, char * label) {
     record->type = RECORD;
-    record->value.recordFields = (ArtVariant*)malloc(num_fields * sizeof(ArtVariant));
+    strncpy(record->label, label, 100);
+    record->value.recordFields = (ArtVariant*)malloc(20 * sizeof(ArtVariant));
     if (record->value.recordFields == NULL) {
         fprintf(stderr, "Failed to allocate memory for record fields.\n");
         exit(EXIT_FAILURE);
@@ -18,14 +19,21 @@ void init_record(ArtVariant *record) {
 }
 
 // Function to add a field to a record
-void add_field_to_record(ArtVariant *record, size_t index, const char *label, ArtVariant value) {
+void add_field_to_record(ArtVariant *record, size_t index, ArtVariant value) {
     if (record->type != RECORD) {
         fprintf(stderr, "Cannot add field to a non-record type.\n");
         exit(EXIT_FAILURE);
     }
-    strcpy(record->value.recordFields[index].label, label);
+    strcpy(record->value.recordFields[index].label, value.label);
     record->value.recordFields[index].type = value.type;
     record->value.recordFields[index].value = value.value;
+}
+
+void free_record(ArtVariant *record) {
+    if (record->type == RECORD) {
+        free(record->value.recordFields);
+        record->value.recordFields = NULL;
+    }
 }
 
 void art_print(ArtVariant v) {

@@ -28,8 +28,9 @@ struct ArtVariant {
 
 // Function declarations
 void art_panic(void);
-void add_field_to_record(ArtVariant *record, size_t index, const char *label, ArtVariant value);
-void init_record(ArtVariant *record, ArtType type);
+void add_field_to_record(ArtVariant *record, size_t index, ArtVariant value);
+void init_record(ArtVariant *record, char * label);
+void free_record(ArtVariant *record);
 void art_print(ArtVariant v);
 
 // Integer arithmetic operations
