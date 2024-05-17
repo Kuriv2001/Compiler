@@ -1,58 +1,53 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-// For Literal
 typedef enum {
     INT,
     FLOAT,
     STRING,
-    BOOL
+    BOOL,
+    RECORD
 } ArtType;
+
+typedef struct ArtVariant ArtVariant;
 
 typedef union {
     int i;
     float f;
-    char* s;
-    int b; // Represent boolean as int
-    void * record;
+    char s[100];
+    int b;
+    ArtVariant* recordFields;
 } ArtValue;
 
-typedef struct {
+struct ArtVariant {
+    char label[100];
     ArtType type;
     ArtValue value;
-} ArtVariant;
+};
 
-// For Records
-typedef struct {
-    ArtType type;
-    char* label;
-    ArtValue value;
-} ArtRecordField;
-
-typedef struct {
-    char* name;
-    size_t field_count;
-    ArtRecordField *fields;
-} ArtRecord;
-
-ArtRecordField create_field(const char* label, ArtVariant variant);
-ArtRecord* create_record(const char* name, size_t field_count);
-void add_field_to_record(ArtRecord* record, size_t index, ArtRecordField field);
-void free_field(ArtRecordField* field);
-void free_record(ArtRecord* record);
-
-void art_panic();
+// Function declarations
+void art_panic(void);
+void add_field_to_record(ArtVariant *record, size_t index, const char *label, ArtVariant value);
+void init_record(ArtVariant *record, ArtType type);
 void art_print(ArtVariant v);
 
+// Integer arithmetic operations
 int art_iadd(int a, int b);
 int art_isub(int a, int b);
 int art_imul(int a, int b);
 int art_idiv(int a, int b);
 int art_irem(int a, int b);
+
+// Program control
 void art_exit_program(int a);
+
+// Logical operations
 int art_lnot(int a);
 int art_land(int a, int b);
 int art_lor(int a, int b);
+
+// Integer bitwise and comparison operations
 int art_ineg(int a);
 int art_ishl(int a, int b);
 int art_ishr(int a, int b);
@@ -65,6 +60,7 @@ int art_iand(int a, int b);
 int art_ior(int a, int b);
 int art_ixor(int a, int b);
 
+// Floating-point operations
 float art_fneg(float a);
 float art_fadd(float a, float b);
 float art_fsub(float a, float b);

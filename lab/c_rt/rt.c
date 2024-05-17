@@ -1,92 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "lib.h"
 
-// For Literal
-typedef enum {
-    INT,
-    FLOAT,
-    STRING,
-    BOOL
-} ArtType;
-
-typedef union {
-    int i;
-    float f;
-    char* s;
-    int b; // Represent boolean as int
-    void * record;
-} ArtValue;
-
-typedef struct {
-    ArtType type;
-    ArtValue value;
-} ArtVariant;
-
-// For Records
-typedef struct {
-    ArtType type;
-    char* label;
-    ArtValue value;
-} ArtRecordField;
-
-typedef struct {
-    char* name;
-    size_t field_count;
-    ArtRecordField *fields;
-} ArtRecord;
-
-ArtRecordField create_field(const char* label, ArtVariant variant) {
-    ArtRecordField field;
-    field.label = strdup(label);
-    field.type = variant.type;
-    field.value = variant.value;
-    return field;
+void art_panic() { 
+    printf("panic\n"); 
+    exit(-1); 
 }
 
-ArtRecord* create_record(const char* name, size_t field_count) {
-    ArtRecord* record = (ArtRecord*)malloc(sizeof(ArtRecord));
-    if (!record) {
-        perror("Failed to allocate memory for record");
+void init_record(ArtVariant *record) {
+    record->type = RECORD;
+    record->value.recordFields = (ArtVariant*)malloc(num_fields * sizeof(ArtVariant));
+    if (record->value.recordFields == NULL) {
+        fprintf(stderr, "Failed to allocate memory for record fields.\n");
         exit(EXIT_FAILURE);
     }
-    record->name = strdup(name);
-    record->field_count = field_count;
-    record->fields = (ArtRecordField*)malloc(field_count * sizeof(ArtRecordField));
-    if (!record->fields) {
-        perror("Failed to allocate memory for fields");
-        free(record->name);
-        free(record);
+}
+
+// Function to add a field to a record
+void add_field_to_record(ArtVariant *record, size_t index, const char *label, ArtVariant value) {
+    if (record->type != RECORD) {
+        fprintf(stderr, "Cannot add field to a non-record type.\n");
         exit(EXIT_FAILURE);
     }
-    return record;
+    strcpy(record->value.recordFields[index].label, label);
+    record->value.recordFields[index].type = value.type;
+    record->value.recordFields[index].value = value.value;
 }
 
-void add_field_to_record(ArtRecord* record, size_t index, ArtRecordField field) {
-    if (index >= record->field_count) {
-        fprintf(stderr, "Index out of bounds when adding field to record\n");
-        return;
-    }
-    record->fields[index] = field;
-}
-
-void free_field(ArtRecordField* field) {
-    free(field->label);
-    if (field->type == STRING) {
-        free(field->value.s);
-    }
-}
-
-void free_record(ArtRecord* record) {
-    for (size_t i = 0; i < record->field_count; ++i) {
-        free_field(&record->fields[i]);
-    }
-    free(record->fields);
-    free(record->name);
-    free(record);
-}
-
-void art_panic() { printf("panic\n"); exit(-1); }
 void art_print(ArtVariant v) {
     switch (v.type) {
         case INT:
@@ -100,6 +41,16 @@ void art_print(ArtVariant v) {
             break;
         case BOOL:
             printf("%s", v.value.b ? "true" : "false");
+            break;
+        case RECORD:
+            printf("Record %s:\n", v.label);
+            for (size_t i = 0; i < 20; ++i) {
+                if (strlen(v.value.recordFields[i].label) > 0) {
+                    printf("  %s: ", v.value.recordFields[i].label);
+                    art_print(v.value.recordFields[i]);
+                    printf("\n");
+                }
+            }
             break;
         default:
             printf("Unknown type");

@@ -39,10 +39,11 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   /** Writes the Scala declaration of `t` in `context`. */ 
   private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit =
-    if t.fields.isEmpty then
-      emitSingletonRecord(t)
-    else
-      emitNonSingletonRecord(t)
+    context.output ++= "" //TODO really do nothing
+    // if t.fields.isEmpty then
+    //   emitSingletonRecord(t)
+    // else
+    //   emitNonSingletonRecord(t)
 
   /** Writes the Scala declaration of `t`, which is not a singleton, in `context`. */ //TODO done
   private def emitNonSingletonRecord(t: symbols.Type.Record)(using context: Context): Unit = 
@@ -195,6 +196,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       if n.identifier == "main" then
         context.output ++= "int main(int argc, char *argv[]) {\n"//TODO do what?
         context.indentation += 1
+        for record <- context.recordsToCreate do
+          context.output ++= "  " * context.indentation
+          context.output ++= s"ArtRecord $record = create_record_${record}() {\n"
       else
         
         context.output ++= transpiledType(n.tpe)
@@ -204,7 +208,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
         // Top-level bindings must have an initializer.
         assert(n.initializer.isDefined)
         context.indentation += 1
-        context.output ++= " =\n"
+        context.output ++= " = "
 
       context.output ++= "  " * context.indentation
       context.inScope((c) => n.initializer.get.visit(this)(using c))
@@ -271,48 +275,23 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
 
-    //Create Record
-    context.output ++= "create_record("
-    context.output ++= s"${discriminator(n.tpe)}" 
-    context.output ++= ", "
-    val numFields = n.fields.size
-    context.output ++= s"${numFields}"
-    context.output ++= ");\n" 
+    // Have a function that would intialize the record
+    context.output ++= s"create_record_${n.identifier}{\n"
 
-    //Create fields
-    var nFields = 0
-    for f <- n.fields do
-      context.output ++= "  " * context.indentation
-      context.output ++= "ArtRecordField "
-      context.output ++= s"${discriminator(f.value.tpe)} "
-      context.output ++= " = "
-      nFields = nFields + 1
-      context.output ++= "create_field( "
-      val label = f.label.getOrElse("_")
-      context.output ++= label
-      context.output ++= ", "
-      f.value.visit(this)
-      context.output ++= " );\n"
+    context.indentation += 1
+    context.output ++= "  " * context.indentation
+    context.output ++= "
 
-    //Add fields to record
-    nFields = 0
-    for f <- n.fields do
-      context.output ++= "  " * context.indentation
-      context.output ++= "add_field_to_record("
-      context.output ++= s"record_${n.identifier}"
-      context.output ++= ", "
-      context.output ++= s"${nFields.toString()}"
-      context.output ++= ", "
-      context.output ++= s"field_${nFields.toString()}"
-      if nFields != numFields - 1 then
-        context.output ++= ");\n"
-      else
-        context.output ++= ")" 
-      nFields = nFields + 1
+    // //Create Record
+    // context.output ++= "  " * context.indentation
+    // context.output ++= "create_record("
+    // context.output ++= s"${discriminator(n.tpe)}" 
+    // context.output ++= ", "
+    // val numFields = n.fields.size
+    // context.output ++= s"${numFields}"
+    // context.output ++= ");\n" 
 
-    
-    //---------------
-    // // Create fields of record
+    // //Create fields
     // var nFields = 0
     // for f <- n.fields do
     //   context.output ++= "  " * context.indentation
@@ -323,6 +302,45 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     //   context.output ++= "create_field( "
     //   val label = f.label.getOrElse("_")
     //   context.output ++= label
+    //   context.output ++= ", "
+    //   f.value.visit(this)
+    //   context.output ++= " );\n"
+
+    // //Add fields to record
+    // nFields = 0
+    // for f <- n.fields do
+    //   context.output ++= "  " * context.indentation
+    //   context.output ++= "add_field_to_record("
+    //   context.output ++= s"record_${n.identifier}"
+    //   context.output ++= ", "
+    //   context.output ++= s"${nFields.toString()}"
+    //   context.output ++= ", "
+    //   context.output ++= s"field_${nFields.toString()}"
+    //   if nFields != numFields - 1 then
+    //     context.output ++= ");\n"
+    //   else
+    //     context.output ++= ")" 
+    //   nFields = nFields + 1
+
+    //   //Finish up function
+    // context.output ++= "\n"
+    // context.output ++= "  " * context.indentation
+    // context.output ++= s"return record_${n.identifier};"
+    // context.output ++= "\n}"
+    // context.recordsToCreate += s"${n.identifier}"
+    
+    // //---------------
+    // // // Create fields of record
+    // // var nFields = 0
+    // // for f <- n.fields do
+    // //   context.output ++= "  " * context.indentation
+    // //   context.output ++= "ArtRecordField "
+    // //   context.output ++= s"${discriminator(f.value.tpe)} "
+    // //   context.output ++= " = "
+    // //   nFields = nFields + 1
+    // //   context.output ++= "create_field( "
+    // //   val label = f.label.getOrElse("_")
+    // //   context.output ++= label
     //   context.output ++= ", "
     //   f.value.visit(this)
     //   context.output ++= " );\n"
@@ -542,6 +560,9 @@ object CPrinter:
 
     /** Stores the records, that have to be freed in the end of the program. */
     var recordsToFree = mutable.Set[String]()
+
+    /** Stores the records, that have to be created in the main function. */
+    var recordsToCreate = mutable.Set[String]()
 
 
   end Context
