@@ -8,10 +8,15 @@ void art_panic() {
     exit(-1); 
 }
 
-void init_record(ArtVariant *record, char * label) {
+void init_record(ArtVariant *record, char * label, int num_fields) {
     record->type = RECORD;
     strncpy(record->label, label, 100);
-    record->value.recordFields = (ArtVariant*)malloc(20 * sizeof(ArtVariant));
+    if (num_fields > 20) {
+        fprintf(stderr, "Cannot have more than 20 fields in a record.\n");
+        exit(EXIT_FAILURE);
+    }
+    record->num_fields = num_fields;
+    record->value.recordFields = (ArtVariant*)malloc(num_fields * sizeof(ArtVariant));
     if (record->value.recordFields == NULL) {
         fprintf(stderr, "Failed to allocate memory for record fields.\n");
         exit(EXIT_FAILURE);

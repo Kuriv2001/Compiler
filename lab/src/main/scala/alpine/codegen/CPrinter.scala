@@ -267,16 +267,16 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= transpiledReferenceTo(n.referredEntity.get.entity)
 
   override def visitBooleanLiteral(n: ast.BooleanLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = BOOL, .value.b = $n.value, .label = \"\"}"
+    context.output ++= s"(ArtVariant){.type = BOOL, .value.b = $n.value, .label = \"\", .num_fields = 1}"
 
   override def visitIntegerLiteral(n: ast.IntegerLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = INT, .value.i = ${n.value}, .label = \"\"}"
+    context.output ++= s"(ArtVariant){.type = INT, .value.i = ${n.value}, .label = \"\", .num_fields = 1}"
 
   override def visitFloatLiteral(n: ast.FloatLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = FLOAT, .value.f = ${n.value}f, .label = \"\"}"
+    context.output ++= s"(ArtVariant){.type = FLOAT, .value.f = ${n.value}f, .label = \"\", .num_fields = 1}"
 
   override def visitStringLiteral(n: ast.StringLiteral)(using context: Context): Unit =
-    context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}, .label = \"\"}"
+    context.output ++= s"(ArtVariant){.type = STRING, .value.s = ${n.value}, .label = \"\", .num_fields = 1}"
 
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
 
@@ -291,7 +291,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "  " * context.indentation
     context.output ++= "ArtVariant tempRecord;\n"
     context.output ++= "  " * context.indentation
-    context.output ++= s"init_record(&tempRecord, \"${discriminator(n.tpe)}\");\n"
+    context.output ++= s"init_record(&tempRecord, \"${discriminator(n.tpe)}\", ${n.fields.size});\n"
 
     //Add fields to record
     var idxFields = 0

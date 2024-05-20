@@ -22,6 +22,7 @@ typedef union {
 
 struct ArtVariant {
     char label[100];
+    int num_fields;
     ArtType type;
     ArtValue value;
 };
@@ -29,7 +30,7 @@ struct ArtVariant {
 // Function declarations
 void art_panic(void);
 void add_field_to_record(ArtVariant *record, size_t index, ArtVariant value);
-void init_record(ArtVariant *record, char * label);
+void init_record(ArtVariant *record, char * label, int num_fields);
 void free_record(ArtVariant *record);
 void art_print(ArtVariant v);
 
