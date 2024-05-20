@@ -147,7 +147,6 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Record): String =
-    print("Discriminator Record")
     val b = StringBuilder("R")
     b ++= t.identifier.drop(1)
     for f <- t.fields do
@@ -281,9 +280,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
 
     // Have a function that would intialize the record
-    context.output ++= s"create_record_${n.identifier}(){\n"
-    context.recordsToCreate += n.identifier
-    context.recordsToFree += n.identifier
+    context.output ++= s"create_record_${discriminator(n.tpe)}(){\n"
+    context.recordsToCreate += discriminator(n.tpe)
+    context.recordsToFree += discriminator(n.tpe)
 
     context.indentation += 1
 
@@ -291,7 +290,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "  " * context.indentation
     context.output ++= "ArtVariant tempRecord;\n"
     context.output ++= "  " * context.indentation
-    context.output ++= s"init_record(&tempRecord, ${n.fields.size}, \"${n.identifier}\");\n"
+    context.output ++= s"init_record(&tempRecord, ${n.fields.size}, \"${discriminator(n.tpe)}\");\n"
 
     //Add fields to record
     var idxFields = 0
@@ -309,7 +308,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "}"
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
-    n.qualification.visit(this)
+    //n.qualification.visit(this)
+    n.selectee.visit(this)
     n.referredEntity match
       // case Some(symbols.EntityReference(e: symbols.Entity.Record, _)) => TODO
       //   context.output ++= "->fields["
