@@ -370,6 +370,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       context.output ++= ", "
       c.visit(this)
 
+    context.output ++= "{art_panic()}\n"
+
     // Default case is optional, we could implement it later here.
 
     // context.indentation -= 1
@@ -386,7 +388,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "  " * context.indentation
     n.body.visit(this)
     context.output ++= "\n"
-    context.output ++= "}\n"
+    context.output ++= "}\nelse "
     context.indentation -= 1
 
   override def visitLet(n: ast.Let)(using context: Context): Unit =
