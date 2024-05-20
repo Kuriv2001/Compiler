@@ -147,6 +147,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   /** Returns a string uniquely identifiyng `t` for use as a discriminator in a mangled name. */
   private def discriminator(t: symbols.Type.Record): String =
+    print("Discriminator Record")
     val b = StringBuilder("R")
     b ++= t.identifier.drop(1)
     for f <- t.fields do
@@ -198,17 +199,21 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
         context.indentation += 1
         for record <- context.recordsToCreate do
           context.output ++= "  " * context.indentation
-          context.output ++= s"ArtRecord $record = create_record_${record}() {\n"
+          context.output ++= s"ArtRecord $record = create_record_${record}();\n"
       else
         
-        context.output ++= transpiledType(n.tpe)
+        //context.output ++= transpiledType(n.tpe)
+        context.output ++= "ArtVariant "
         context.output ++= " "
-        context.output ++= transpiledReferenceTo(n.entityDeclared)
         
-        // Top-level bindings must have an initializer.
-        assert(n.initializer.isDefined)
-        context.indentation += 1
-        context.output ++= " = "
+        val tpeFunction = n.tpe
+        if tpeFunction.toString.charAt(0) != '#' then
+          context.output ++= transpiledReferenceTo(n.entityDeclared)
+          
+          // Top-level bindings must have an initializer.
+          assert(n.initializer.isDefined)
+          context.indentation += 1
+          context.output ++= " = "
 
       context.output ++= "  " * context.indentation
       context.inScope((c) => n.initializer.get.visit(this)(using c))
@@ -276,7 +281,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   override def visitRecord(n: ast.Record)(using context: Context): Unit =
 
     // Have a function that would intialize the record
-    context.output ++= s"create_record_${n.identifier}{\n"
+    context.output ++= s"create_record_${n.identifier}(){\n"
+    context.recordsToCreate += n.identifier
+    context.recordsToFree += n.identifier
 
     context.indentation += 1
 
@@ -299,7 +306,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "  " * context.indentation
     context.output ++= "return tempRecord;\n"
     context.indentation -= 1
-    context.output ++= "}\n\n"
+    context.output ++= "}"
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     n.qualification.visit(this)
@@ -309,7 +316,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       //   context.output ++= e.index
       //   context.output ++= "]"
       case Some(symbols.EntityReference(e: symbols.Entity.Field, _)) =>
-        context.output ++= ".field_" + e.index
+        context.output ++= ".recordFields[" + e.index + "]"
       case _ =>
         unexpectedVisit(n.selectee)
 
