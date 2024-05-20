@@ -3,44 +3,66 @@
 #include <string.h>
 #include "lib.h"
 
+void art_panic() { 
+    printf("panic\n"); 
+    exit(-1); 
+}
+
+// returns true if both ArtVariants can be matched else false
+//TODO wildcard
 int art_compare(ArtVariant a, ArtVariant b) {
     if (a.type != b.type) {
-        return a.type - b.type;
+        return 0;
     }
-
     switch (a.type) {
         case INT:
-            return (a.value.i > b.value.i) - (a.value.i < b.value.i);
+            if (b.num_fields <= 0){
+                return 1;
+            } else if (a.value == b.value){
+                return 1;
+            } else {
+                return 0;
+            }
         case FLOAT:
-            if (a.value.f < b.value.f) return -1;
-            if (a.value.f > b.value.f) return 1;
-            return 0;
+            if (b.num_fields <= 0){
+                return 1;
+            } else if (a.value == b.value){
+                return 1;
+            } else {
+                return 0;
+            }
         case STRING:
-            return strcmp(a.value.s, b.value.s);
+            if (b.num_fields <= 0){
+                return 1;
+            } else if (!strcmp(a.value, b.value)){
+                return 1;
+            } else {
+                return 0;
+            }
         case BOOL:
-            return a.value.b - b.value.b;
+            if (b.num_fields <= 0){
+                return 1;
+            } else if (a.value == b.value){
+                return 1;
+            } else {
+                return 0;
+            }
         case RECORD: {
             // Compare the labels
             int label_cmp = strcmp(a.label, b.label);
             if (label_cmp != 0) return label_cmp;
             
             // Compare the fields (assumes same number of fields)
-            for (size_t i = 0; i < 20; ++i) {
-                if (strlen(a.value.recordFields[i].label) == 0) break;
+            for (size_t i = 0; i < a.num_fields; ++i) {
                 int field_cmp = art_compare(a.value.recordFields[i], b.value.recordFields[i]);
-                if (field_cmp != 0) return field_cmp;
+                if (field_cmp == 0) return 0;
             }
-            return 0;
+            return 1;
         }
         default:
             printf("Unknown type in art_compare\n");
-            exit(EXIT_FAILURE);
+            art_panic()
     }
-}
-
-void art_panic() { 
-    printf("panic\n"); 
-    exit(-1); 
 }
 
 void init_record(ArtVariant *record, char * label, int num_fields) {
