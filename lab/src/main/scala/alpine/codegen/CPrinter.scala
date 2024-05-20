@@ -30,7 +30,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.typesToEmit.map(emitRecord)
     //Free all the strings
     for record <- c.recordsToFree do
-      c.output ++= "free_record("
+      c.output ++= "free_record(&"
       c.output ++= record
       c.output ++= ");\n"
     //Close it  
@@ -182,7 +182,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       case Some(q) =>
         s"${scalaized(q)}_${n.identifier}"
       case None =>
-        "_" + n.identifier
+        ""
+        //"_" + n.identifier
 
   override def visitLabeled[T <: ast.Tree](n: ast.Labeled[T])(using context: Context): Unit =
     unexpectedVisit(n)
@@ -198,7 +199,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
         context.indentation += 1
         for record <- context.recordsToCreate do
           context.output ++= "  " * context.indentation
-          context.output ++= s"ArtRecord $record = create_record_${record}();\n"
+          context.output ++= s"ArtVariant $record = create_record_${record}();\n"
       else
         
         //context.output ++= transpiledType(n.tpe)
@@ -290,15 +291,15 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "  " * context.indentation
     context.output ++= "ArtVariant tempRecord;\n"
     context.output ++= "  " * context.indentation
-    context.output ++= s"init_record(&tempRecord, ${n.fields.size}, \"${discriminator(n.tpe)}\");\n"
+    context.output ++= s"init_record(&tempRecord, \"${discriminator(n.tpe)}\");\n"
 
     //Add fields to record
     var idxFields = 0
     for field <- n.fields do
       context.output ++= "  " * context.indentation
-      context.output ++= s"add_field_to_record(&tempRecord, ${idxFields}, ${field.label.getOrElse("_")}, type,"
+      context.output ++= s"add_field_to_record(&tempRecord, ${idxFields}, "
       field.value.visit(this)
-      context.output ++= "};\n"
+      context.output ++= ");\n"
       idxFields += 1
 
     //Return the record
@@ -309,14 +310,14 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   override def visitSelection(n: ast.Selection)(using context: Context): Unit =
     //n.qualification.visit(this)
-    n.selectee.visit(this)
+    n.qualification.visit(this)
     n.referredEntity match
       // case Some(symbols.EntityReference(e: symbols.Entity.Record, _)) => TODO
       //   context.output ++= "->fields["
       //   context.output ++= e.index
       //   context.output ++= "]"
       case Some(symbols.EntityReference(e: symbols.Entity.Field, _)) =>
-        context.output ++= ".recordFields[" + e.index + "]"
+        context.output ++= ".value.recordFields[" + e.index + "]"
       case _ =>
         unexpectedVisit(n.selectee)
 
