@@ -11,6 +11,8 @@ import scala.collection.mutable
 import alpine.symbols.Type
 import alpine.symbols.Type.Bool
 import scala.compiletime.ops.double
+import scala.quoted.Expr
+import alpine.ast.Expression
 
 /** The transpilation of an Alpine program to Scala. */
 final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Context, Unit]:
@@ -355,32 +357,38 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "\n}\n\n"
 
   override def visitMatch(n: ast.Match)(using context: Context): Unit =
-    context.output ++= "switch ("
-    n.scrutinee.visit(this)
-    context.output ++= ") {\n"
-    context.indentation += 1
+    // context.output ++= "switch ("
+    // n.scrutinee.visit(this)
+    // context.output ++= ") {\n"
+    // context.indentation += 1
     val cases = n.cases
 
     for c <- cases do
       context.output ++= "  " * context.indentation
+      context.output ++= "if (art_compare("
+      n.scrutinee.visit(this)
+      context.output ++= ", "
       c.visit(this)
+
+    context.output ++= "{art_panic()}\n"
 
     // Default case is optional, we could implement it later here.
 
-    context.indentation -= 1
-    context.output ++= "}\n"
+    // context.indentation -= 1
+    // context.output ++= "}\n"
 
   override def visitMatchCase(n: ast.Match.Case)(using context: Context): Unit =
-    context.output ++= "case "
+    // context.output ++= "case "
 
     // We might need to delete the val from the binding like we did in ScalaPrinter.scala
     n.pattern.visit(this)
+    context.output ++= ")) {"
     context.output ++= ":\n"
     context.indentation += 1
     context.output ++= "  " * context.indentation
     n.body.visit(this)
     context.output ++= "\n"
-    context.output ++= "break ;\n"
+    context.output ++= "}\nelse "
     context.indentation -= 1
 
   override def visitLet(n: ast.Let)(using context: Context): Unit =

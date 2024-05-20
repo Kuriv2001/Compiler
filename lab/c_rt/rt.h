@@ -27,7 +27,9 @@ struct ArtVariant {
     ArtValue value;
 };
 
+
 // Function declarations
+int art_compare(ArtType a, ArtType b);
 void art_panic(void);
 void add_field_to_record(ArtVariant *record, size_t index, ArtVariant value);
 void init_record(ArtVariant *record, char * label, int num_fields);

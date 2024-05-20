@@ -3,6 +3,10 @@
 #include <string.h>
 #include "lib.h"
 
+int art_compare(ArtType a, ArtType b){
+    return 0;
+}
+
 void art_panic() { 
     printf("panic\n"); 
     exit(-1); 
