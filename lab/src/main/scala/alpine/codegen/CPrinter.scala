@@ -370,6 +370,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       context.output ++= ", "
       c.visit(this)
 
+    context.output ++= "  " * context.indentation
     context.output ++= "{art_panic()}\n"
 
     // Default case is optional, we could implement it later here.
