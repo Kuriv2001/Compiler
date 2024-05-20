@@ -7,7 +7,8 @@ typedef enum {
     FLOAT,
     STRING,
     BOOL,
-    RECORD
+    RECORD,
+    WILDCARD
 } ArtType;
 
 typedef struct ArtVariant ArtVariant;

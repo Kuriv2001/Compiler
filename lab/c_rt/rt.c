@@ -9,8 +9,12 @@ void art_panic() {
 }
 
 // returns true if both ArtVariants can be matched else false
-//TODO wildcard
 int art_compare(ArtVariant a, ArtVariant b) {
+    
+    if(b.type == WILDCARD){
+        return 1;
+    }
+
     if (a.type != b.type) {
         return 0;
     }
