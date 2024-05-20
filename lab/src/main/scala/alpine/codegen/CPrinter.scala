@@ -41,7 +41,21 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
   /** Writes the Scala declaration of `t` in `context`. */ 
   private def emitRecord(t: symbols.Type.Record)(using context: Context): Unit =
-    context.output ++= "" //TODO really do nothing
+
+  // ArtVariant RrecordIfoo(int v){
+  //   ArtVariant temp;
+  //   temp.label = 
+  //   temp.type = "INT"
+  //   temp.num_fields = 1
+  //   temp.value = v
+  // }
+
+  // int main(){
+  //   ...
+  //   ArtVariant foo1 = RrecordIageSname(discriminator, name, age)
+  //   ArtVariant foo2 = RrecordIageSname(discriminator, name, age)
+  // }
+  context.output ++= ""
     // if t.fields.isEmpty then
     //   emitSingletonRecord(t)
     // else
