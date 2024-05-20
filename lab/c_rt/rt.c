@@ -3,8 +3,39 @@
 #include <string.h>
 #include "lib.h"
 
-int art_compare(ArtType a, ArtType b){
-    return 0;
+int art_compare(ArtVariant a, ArtVariant b) {
+    if (a.type != b.type) {
+        return a.type - b.type;
+    }
+
+    switch (a.type) {
+        case INT:
+            return (a.value.i > b.value.i) - (a.value.i < b.value.i);
+        case FLOAT:
+            if (a.value.f < b.value.f) return -1;
+            if (a.value.f > b.value.f) return 1;
+            return 0;
+        case STRING:
+            return strcmp(a.value.s, b.value.s);
+        case BOOL:
+            return a.value.b - b.value.b;
+        case RECORD: {
+            // Compare the labels
+            int label_cmp = strcmp(a.label, b.label);
+            if (label_cmp != 0) return label_cmp;
+            
+            // Compare the fields (assumes same number of fields)
+            for (size_t i = 0; i < 20; ++i) {
+                if (strlen(a.value.recordFields[i].label) == 0) break;
+                int field_cmp = art_compare(a.value.recordFields[i], b.value.recordFields[i]);
+                if (field_cmp != 0) return field_cmp;
+            }
+            return 0;
+        }
+        default:
+            printf("Unknown type in art_compare\n");
+            exit(EXIT_FAILURE);
+    }
 }
 
 void art_panic() { 
