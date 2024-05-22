@@ -29,9 +29,9 @@ def transpile(configuration: Configuration): Unit =
   val output = transpiler.transpile()
   println(output)
 
-def Transpile_to_C(configuration: Configuration): Unit =
+def Transpile_to_Scala(configuration: Configuration): Unit =
   val typedSyntax = typeCheck(configuration)
-  val transpiler = codegen.CPrinter(typedSyntax)
+  val transpiler = codegen.ScalaPrinter(typedSyntax)
   val output = transpiler.transpile()
   println(output)  
 

@@ -19,6 +19,9 @@ trait TreeVisitor[A, B]:
   def visitTypeDeclaration(n: TypeDeclaration)(using a: A): B
 
   /** Visits `n` with state `a`. */
+  def visitMethod(n: Method)(using a: A): B
+
+  /** Visits `n` with state `a`. */
   def visitFunction(n: Function)(using a: A): B
 
   /** Visits `n` with state `a`. */

@@ -121,6 +121,9 @@ final class CodeGenerator(syntax: TypedProgram) extends ast.TreeVisitor[CodeGene
   def visitTypeDeclaration(n: TypeDeclaration)(using a: Context): Unit = ???
 
   /** Visits `n` with state `a`. */
+  def visitMethod(n: Method)(using a: Context): Unit = ???
+
+  /** Visits `n` with state `a`. */
   def visitFunction(n: ast.Function)(using a: Context): Unit = 
     //Process input parameters
     n.inputs.foreach(_.visit(this))

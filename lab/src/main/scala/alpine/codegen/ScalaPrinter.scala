@@ -226,6 +226,8 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
   override def visitTypeDeclaration(n: ast.TypeDeclaration)(using context: Context): Unit =
     unexpectedVisit(n)
 
+  override def visitMethod(n: ast.Method)(using context: Context): Unit = ???
+
   override def visitFunction(n: ast.Function)(using context: Context): Unit =
     context.output ++= "  " * context.indentation
     context.output ++= "def "
@@ -505,10 +507,10 @@ object ScalaPrinter:
 
 end ScalaPrinter
 
-// extension (self: StringBuilder) def appendCommaSeparated[T](ls: Seq[T])(
-//     reduce: (StringBuilder, T) => Unit
-// ): Unit =
-//     var f = true
-//     for l <- ls do
-//       if f then f = false else self ++= ", "
-//       reduce(self, l)
+extension (self: StringBuilder) def appendCommaSeparated[T](ls: Seq[T])(
+    reduce: (StringBuilder, T) => Unit
+): Unit =
+    var f = true
+    for l <- ls do
+      if f then f = false else self ++= ", "
+      reduce(self, l)
