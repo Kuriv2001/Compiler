@@ -22,7 +22,7 @@ int art_compare(ArtVariant a, ArtVariant b) {
         case INT:
             if (b.num_fields <= 0){
                 return 1;
-            } else if (a.value == b.value){
+            } else if (a.value.i == b.value.i){
                 return 1;
             } else {
                 return 0;
@@ -30,7 +30,7 @@ int art_compare(ArtVariant a, ArtVariant b) {
         case FLOAT:
             if (b.num_fields <= 0){
                 return 1;
-            } else if (a.value == b.value){
+            } else if (a.value.f == b.value.f){
                 return 1;
             } else {
                 return 0;
@@ -38,7 +38,7 @@ int art_compare(ArtVariant a, ArtVariant b) {
         case STRING:
             if (b.num_fields <= 0){
                 return 1;
-            } else if (!strcmp(a.value, b.value)){
+            } else if (!strcmp(a.value.s, b.value.s)){
                 return 1;
             } else {
                 return 0;
@@ -46,7 +46,7 @@ int art_compare(ArtVariant a, ArtVariant b) {
         case BOOL:
             if (b.num_fields <= 0){
                 return 1;
-            } else if (a.value == b.value){
+            } else if (a.value.b == b.value.b){
                 return 1;
             } else {
                 return 0;
@@ -65,7 +65,7 @@ int art_compare(ArtVariant a, ArtVariant b) {
         }
         default:
             printf("Unknown type in art_compare\n");
-            art_panic()
+            art_panic();
     }
 }
 
