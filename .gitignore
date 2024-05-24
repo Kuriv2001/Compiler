@@ -1,0 +1,17 @@
+.DS_Store
+/.metals
+/.vscode
+.bloop
+.bsp
+project
+target
+lab/.metals
+lab/.metals/metals.lock.db
+lab/.metals/metals.log
+lab/.metals/metals.mv.db
+lab/.vscode/settings.json
+lab01_interpreter/.metals/metals.log
+lab01_interpreter/.metals/metals.mv.db
+lab01_interpreter/.vscode/settings.json
+lab/output.wasm
+lab/output.wat
