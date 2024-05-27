@@ -27,15 +27,33 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     given c: Context = Context()
     c.output ++= "\nint main(int argc, char *argv[]) {\n"
     syntax.declarations.foreach(_.visit(this))
-    //TODO
-    for record <- c.recordsToFree do
-      c.output ++= "free_record(&"
-      c.output ++= record
-      c.output ++= ");\n"
+    //c.typesToEmit.map(freeRecord) => to fix
     c.output ++= "}"
-    val imports = "#include <stdio.h>\n#include <stdio.h>\n#include \"lib.h\"\n\n"
-    imports + c.typesToEmit.map(emitRecord).mkString("\n") + c.output.toString
+    val imports = "#include <stdio.h>\n#include <stdlib.h>\n#include \"lib.h\"\n\n"
+    val functionDefs = c.functionsToEmit.map(emitFunctionDeclaration).mkString("\n")
+    imports + functionDefs + c.typesToEmit.map(emitRecord).mkString("\n") + c.output.toString
     
+  /** creates function declaration for the record */  
+  private def emitFunctionDeclaration(t: alpine.ast.Function)(using context: Context): String =
+    val sb = new StringBuilder
+    sb ++= s"ArtVariant ${transpiledReferenceTo(t.entityDeclared)}("
+    var idxFields = 0
+    for field <- t.inputs do
+      sb ++= "ArtVariant "
+      sb ++= " "
+      sb ++= field.identifier
+      if idxFields < t.inputs.size - 1 then
+        sb ++= ", "
+      idxFields += 1
+    sb ++= ");"
+    sb.toString()
+
+  /** frees a record */
+  private def freeRecord(t: ast.Record)(using context: Context): Unit =
+    context.output ++= "free_record(&"
+    //context.output ++= transpiledReferenceTo(t.entityDeclared)
+    context.output ++= ");\n"
+
   /** Writes the C declaration of `t` to the output buffer. */
   private def emitRecord(t: symbols.Type.Record)(using context: Context): String =
     val sb = new StringBuilder
@@ -240,6 +258,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= transpiledType(symbols.Type.Arrow.from(n.tpe).get.output) //tu es la
     context.output ++= " "
     context.output ++= transpiledReferenceTo(n.entityDeclared)
+    context.registerFunction(n)
     context.output ++= "("
     context.output.appendCommaSeparated(n.inputs) { (o, a) =>
         o ++= transpiledType(a.tpe)
@@ -485,6 +504,12 @@ object CPrinter:
     /** The types that must be emitted in the program. */
     def typesToEmit: Set[symbols.Type.Record] = _typesToEmit.toSet
 
+    /** The functions that must be emitted in the program.  Mutable because we need to add functions to it. */
+    private var _functionsToEmit = mutable.Set[alpine.ast.Function]()
+
+    /** The functions that must be emitted in the program. */
+    def functionsToEmit: Set[alpine.ast.Function] = _functionsToEmit.toSet
+
     /** The (partial) result of the transpilation. */
     private var _output = StringBuilder()
 
@@ -496,6 +521,10 @@ object CPrinter:
 
     /** `true` iff the transpiler is processing top-level symbols. */
     def isTopLevel: Boolean = _isTopLevel
+
+    /** add function to the set of functions that are used by the transpiled program. */
+    def registerFunction(f: ast.Function): Unit =
+      _functionsToEmit.add(f)
 
     /** Adds `t` to the set of types that are used by the transpiled program. */
     def registerUse(t: symbols.Type.Record): Unit =
@@ -512,13 +541,6 @@ object CPrinter:
       var tl = _isTopLevel
       _isTopLevel = false
       try action(this) finally _isTopLevel = tl
-
-    /** Stores the records, that have to be freed in the end of the program. */
-    var recordsToFree = mutable.Set[String]()
-
-    /** Stores the records, that have to be created in the main function. */
-    var recordsToCreate = mutable.Set[String]()
-
 
   end Context
 
