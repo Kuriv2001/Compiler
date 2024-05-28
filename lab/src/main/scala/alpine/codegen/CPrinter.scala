@@ -13,6 +13,7 @@ import alpine.symbols.Type.Bool
 import scala.compiletime.ops.double
 import scala.quoted.Expr
 import alpine.ast.Expression
+import alpine.ast.Typecast
 
 /** The transpilation of an Alpine program to Scala. */
 final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Context, Unit]:
@@ -463,10 +464,24 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     n.inner.visit(this)
     context.output ++= ")"
 
+    //TODO Problem, have no types haha, just ArtVariant
   override def visitAscribedExpression(
       n: ast.AscribedExpression
   )(using context: Context): Unit =
-    ???
+    val castType = transpiledType(n.tpe)
+    n.operation match
+      case Typecast.NarrowUnconditionally =>
+        n.inner.visit(this)
+        // context.output ++= s"art_narrowUnconditionally(${castType}, "
+        // n.inner.visit(this)
+        // context.output ++= ")"
+      case Typecast.Narrow =>
+        n.inner.visit(this)
+        // context.output ++= s"art_narrow(${castType}, "
+        // n.inner.visit(this)
+        // context.output ++= ")"
+      case Typecast.Widen =>
+        n.inner.visit(this)
 
   override def visitTypeIdentifier(n: ast.TypeIdentifier)(using context: Context): Unit =
     unexpectedVisit(n)
@@ -489,8 +504,21 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
   override def visitValuePattern(n: ast.ValuePattern)(using context: Context): Unit =
     ???
 
+    //TODO lots of fixing todo
   override def visitRecordPattern(n: ast.RecordPattern)(using context: Context): Unit =
-    ???
+    context.registerUse(n.tpe.asInstanceOf[Type.Record])
+    context.output ++= transpiledType(n.tpe.asInstanceOf[Type.Record])
+
+    if(!n.fields.isEmpty) {
+      context.output.appendCommaSeparated(n.fields)((output, f) =>
+        
+        val before = context.output.lastIndexOf("val")
+        f.value.visit(this)
+        val after = context.output.lastIndexOf("val")
+
+        if (before != after) then context.output.delete(after, after+4))     
+    }
+    context.output ++= ")"
 
   override def visitWildcard(n: ast.Wildcard)(using context: Context): Unit =
     ???
