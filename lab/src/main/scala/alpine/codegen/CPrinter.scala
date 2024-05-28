@@ -28,15 +28,19 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.output ++= "\nint main(int argc, char *argv[]) {\n"
     syntax.declarations.foreach(_.visit(this))
     //c.typesToEmit.map(freeRecord) => to fix
-    c.output ++= "}"
+    c.output ++= "}\n\n"
+    c.functionsToEmit.foreach(emitFunctionDefinition)
     val imports = "#include <stdio.h>\n#include <stdlib.h>\n#include \"lib.h\"\n\n"
     val functionDefs = c.functionsToEmit.map(emitFunctionDeclaration).mkString("\n")
     imports + functionDefs + c.typesToEmit.map(emitRecord).mkString("\n") + c.output.toString
-    
-  /** creates function declaration for the record */  
+
+
+  /** creates function declaration */
   private def emitFunctionDeclaration(t: alpine.ast.Function)(using context: Context): String =
-    val sb = new StringBuilder
-    sb ++= s"ArtVariant ${transpiledReferenceTo(t.entityDeclared)}("
+    val sb = new StringBuilder()
+    sb ++= "ArtVariant "
+    sb ++= transpiledReferenceTo(t.entityDeclared)
+    sb ++= "("
     var idxFields = 0
     for field <- t.inputs do
       sb ++= "ArtVariant "
@@ -45,8 +49,34 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       if idxFields < t.inputs.size - 1 then
         sb ++= ", "
       idxFields += 1
-    sb ++= ");"
+    sb ++= ");\n"
     sb.toString()
+    
+  /** creates function init for the record */  
+  private def emitFunctionDefinition(t: alpine.ast.Function)(using context: Context): Unit =
+    context.output ++= "  " * context.indentation
+    context.output ++= transpiledType(symbols.Type.Arrow.from(t.tpe).get.output) //tu es la
+    context.output ++= " "
+    context.output ++= transpiledReferenceTo(t.entityDeclared)
+    context.output ++= "("
+    context.output.appendCommaSeparated(t.inputs) { (o, a) =>
+        o ++= transpiledType(a.tpe)
+        o ++= " "
+        o ++= a.identifier
+    }
+    context.output ++= ") {\n"
+ 
+    context.indentation += 1
+    
+    context.output ++= "  " * context.indentation
+    context.output ++= "return  "
+    context.inScope((c) => t.body.visit(this)(using c))  
+    context.output ++= ";"
+    
+    context.indentation -= 1
+    context.output ++= "\n"
+    context.output ++= "  " * context.indentation
+    context.output ++= "}\n\n"
 
   /** frees a record */
   private def freeRecord(t: ast.Record)(using context: Context): Unit =
@@ -217,7 +247,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
       // If the is the entry point if it's called "main".
       if n.identifier == "main" then
-        context.output ++= "\n//Where main would be\n"
+        context.output ++= "\n//Start of main:\n"
         // context.output ++= "int main(int argc, char *argv[]) {\n"//TODO do what?
         // context.indentation += 1
       else
@@ -254,30 +284,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
 
     //TODO done
   override def visitFunction(n: ast.Function)(using context: Context): Unit =
-    context.output ++= "  " * context.indentation
-    context.output ++= transpiledType(symbols.Type.Arrow.from(n.tpe).get.output) //tu es la
-    context.output ++= " "
-    context.output ++= transpiledReferenceTo(n.entityDeclared)
+    context.output ++= ""
     context.registerFunction(n)
-    context.output ++= "("
-    context.output.appendCommaSeparated(n.inputs) { (o, a) =>
-        o ++= transpiledType(a.tpe)
-        o ++= " "
-        o ++= a.identifier
-    }
-    context.output ++= ") {\n"
- 
-    context.indentation += 1
-    
-    context.output ++= "  " * context.indentation
-    context.output ++= "return  "
-    context.inScope((c) => n.body.visit(this)(using c))  
-    context.output ++= ";"
-    
-    context.indentation -= 1
-    context.output ++= "\n"
-    context.output ++= "  " * context.indentation
-    context.output ++= "}\n\n"
 
   override def visitParameter(n: ast.Parameter)(using context: Context): Unit =
     unexpectedVisit(n)
