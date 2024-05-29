@@ -254,6 +254,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       else
         
         //context.output ++= transpiledType(n.tpe)
+        
+        context.output ++= "  " * context.indentation
         context.output ++= "ArtVariant "
         context.output ++= " "
         
@@ -263,16 +265,21 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
           context.registerFree(transpiledReferenceTo(n.entityDeclared))
           
         context.output ++= transpiledReferenceTo(n.entityDeclared)
-        
+
         // Top-level bindings must have an initializer.
         assert(n.initializer.isDefined)
-        context.indentation += 1
-        context.output ++= " = "
+        // context.indentation += 1
 
-      context.output ++= "  " * context.indentation
+        if n.initializer.get.isInstanceOf[ast.Match] then
+          context.registerMatch(transpiledReferenceTo(n.entityDeclared))
+          context.output ++= ";\n"
+        else
+          context.output ++= " = "
+
+      // context.output ++= "  " * context.indentation
       context.inScope((c) => n.initializer.get.visit(this)(using c))
       context.output ++= ";\n\n"
-      context.indentation -= 1
+      // context.indentation -= 1
 
     // Bindings at local-scope are used in let-bindings and pattern cases.
     else
@@ -415,7 +422,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       c.visit(this)
 
     context.output ++= "  " * context.indentation
-    context.output ++= "{art_panic();}\n"
+    context.output ++= "art_panic()"
+
+    context.freeMatch()
 
     // Default case is optional, we could implement it later here.
 
@@ -431,6 +440,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "\n"
     context.indentation += 1
     context.output ++= "  " * context.indentation
+    context.output ++= context.currentMatch
+    context.output ++= " = "
     n.body.visit(this)
     context.output ++= ";\n"
     context.output ++= "}\nelse "
@@ -534,7 +545,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     // context.output ++= ")"
 
   override def visitWildcard(n: ast.Wildcard)(using context: Context): Unit =
-    context.output ++= "(Artvariant) {.label = \"\", .num_fields = 0, .type = WILDCARD, .value = { .i = 0 }})"
+    context.output ++= "(ArtVariant) {.label = \"\", .num_fields = 0, .type = WILDCARD, .value.i = 0 }"
   
 
   override def visitError(n: ast.ErrorTree)(using context: Context): Unit =
@@ -566,6 +577,10 @@ object CPrinter:
     /** The records that must be freed in the program. */
     def recordsToFree: Set[String] = _recordsToFree.toSet
 
+    private var _currentMatch =  List[String]()
+
+    def currentMatch: String = _currentMatch.head
+
     /** The (partial) result of the transpilation. */
     private var _output = StringBuilder()
 
@@ -589,6 +604,12 @@ object CPrinter:
     /** Register record to free */
     def registerFree(t: String): Unit =
       _recordsToFree.add(t)
+
+    def registerMatch(matchRet: String): Unit =
+      _currentMatch = matchRet :: _currentMatch   
+
+    def freeMatch(): Unit =
+      _currentMatch = _currentMatch.tail
 
     /** Returns `action` applied on `this` where `output` has been exchanged with `o`. */
     def swappingOutputBuffer[R](o: StringBuilder)(action: Context => R): R =

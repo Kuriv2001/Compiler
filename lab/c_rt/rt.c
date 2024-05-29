@@ -10,52 +10,34 @@ void art_panic() {
 
 // returns true if both ArtVariants can be matched else false
 int art_compare(ArtVariant a, ArtVariant b) {
-    
-    if(b.type == WILDCARD){
+    if (b.type == WILDCARD) {
         return 1;
     }
 
     if (a.type != b.type) {
         return 0;
     }
+
     switch (a.type) {
         case INT:
-            if (b.num_fields <= 0){
-                return 1;
-            } else if (a.value.i == b.value.i){
-                return 1;
-            } else {
-                return 0;
-            }
+            return (b.num_fields <= 0) || (a.value.i == b.value.i);
+
         case FLOAT:
-            if (b.num_fields <= 0){
-                return 1;
-            } else if (a.value.f == b.value.f){
-                return 1;
-            } else {
-                return 0;
-            }
+            return (b.num_fields <= 0) || (a.value.f == b.value.f);
+
         case STRING:
-            if (b.num_fields <= 0){
-                return 1;
-            } else if (!strcmp(a.value.s, b.value.s)){
-                return 1;
-            } else {
-                return 0;
-            }
+            return (b.num_fields <= 0) || (strcmp(a.value.s, b.value.s) == 0);
+
         case BOOL:
-            if (b.num_fields <= 0){
-                return 1;
-            } else if (a.value.b == b.value.b){
-                return 1;
-            } else {
-                return 0;
-            }
+            return (b.num_fields <= 0) || (a.value.b == b.value.b);
+
         case RECORD: {
             // Compare the labels
             int label_cmp = strcmp(a.label, b.label);
-            if (label_cmp != 0) return label_cmp;
+            if (label_cmp != 0 || a.num_fields != b.num_fields) return 0;
+
             
+
             // Compare the fields (assumes same number of fields)
             for (size_t i = 0; i < a.num_fields; ++i) {
                 int field_cmp = art_compare(a.value.recordFields[i], b.value.recordFields[i]);
@@ -63,9 +45,11 @@ int art_compare(ArtVariant a, ArtVariant b) {
             }
             return 1;
         }
+
         default:
             printf("Unknown type in art_compare\n");
             art_panic();
+            return 0;  // Return a value to ensure consistency
     }
 }
 
