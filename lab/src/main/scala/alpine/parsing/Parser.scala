@@ -98,24 +98,54 @@ class Parser(val source: SourceFile):
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
     val fun = expect(K.Fun)
-    val funIdentifier = functionIdentifier()
-    val parameters = valueParameterList()
 
-    val functionType = peek match
-      case Some(Token(K.Arrow, _)) =>
-        expect(K.Arrow)
-        Some(tpe())
+    val s = snapshot()
+
+    try {
+      // In case of a method declaration
+      val receiverType = tpe()
+      expect(K.Dot)
+
+      val funIdentifier = functionIdentifier()
+      val parameters = valueParameterList()
+
+      val functionType = peek match
+        case Some(Token(K.Arrow, _)) =>
+          expect(K.Arrow)
+          Some(tpe())
+        case _ =>
+          None
+
+      expect(K.LBrace)
+      val e = expression()
+      val rBrace = expect(K.RBrace)
+
+      Function(funIdentifier.toString(), Some(receiverType),
+              Nil /* generic parameters can be done later for the project */,
+              parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
+    } catch {
       case _ =>
-        None
+        restore(s)
 
-    expect(K.LBrace)
-    val e = expression()
-    val rBrace = expect(K.RBrace)
+        val funIdentifier = functionIdentifier()
+        val parameters = valueParameterList()
 
-    Function(funIdentifier.toString(), None /* TODO: Need to include the receiverType for methods and free functions */,
-            Nil /* generic parameters can be done later for the project */,
-            parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
-    
+        val functionType = peek match
+          case Some(Token(K.Arrow, _)) =>
+            expect(K.Arrow)
+            Some(tpe())
+          case _ =>
+            None
+
+        expect(K.LBrace)
+        val e = expression()
+        val rBrace = expect(K.RBrace)
+
+        Function(funIdentifier.toString(), None,
+                Nil /* generic parameters can be done later for the project */,
+                parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
+    }
+
 
   /** Parses and returns the identifier of a function. */
   private def functionIdentifier(): String =
@@ -297,6 +327,7 @@ class Parser(val source: SourceFile):
       case K.Dot =>
         take()
 
+        // For methods, need to also check if we have a left parenthesis after an identifier because it would mean that we are calling a function
         peek match
           case Some(Token(K.Integer, _)) =>
             val i = integerLiteral()
@@ -304,7 +335,20 @@ class Parser(val source: SourceFile):
 
           case Some(Token(K.Identifier, _)) =>
             val i = identifier()
-            return Selection(pe, i, pe.site.extendedToCover(i.site))
+
+            // If we have a left parenthesis, it means that we are calling a function
+            val s = snapshot()
+
+            try {
+              val args = parenthesizedLabeledList(() => pe)
+              return Application(pe, args, pe.site.extendedToCover(args.last.site))
+
+            } catch {
+              case _ =>
+                restore(s)
+
+                return Selection(pe, i, pe.site.extendedToCover(i.site))
+            }
 
           case Some(t) if t.kind.isOperatorPart =>
             operator() match
@@ -702,8 +746,7 @@ class Parser(val source: SourceFile):
   /** Parses and returns the fields of a record pattern. */
   private def recordPatternFields(): List[Labeled[Pattern]] =
     commaSeparatedList(K.RParen.matches, () => labeled(() => pattern()))
-
-    
+  
 
   /** Parses and returns a binding pattern. */
   private def bindingPattern(): Binding =
