@@ -28,7 +28,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     given c: Context = Context()
     c.output ++= "\nint main(int argc, char *argv[]) {\n"
     syntax.declarations.foreach(_.visit(this))
-    //c.typesToEmit.map(freeRecord) => to fix
+    c.recordsToFree.foreach(freeRecord)
     c.output ++= "}\n\n"
     c.functionsToEmit.foreach(emitFunctionDefinition)
     val imports = "#include <stdio.h>\n#include <stdlib.h>\n#include \"lib.h\"\n\n"
@@ -80,9 +80,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= "}\n\n"
 
   /** frees a record */
-  private def freeRecord(t: ast.Record)(using context: Context): Unit =
+  private def freeRecord(name: String)(using context: Context): Unit =
     context.output ++= "free_record(&"
-    //context.output ++= transpiledReferenceTo(t.entityDeclared)
+    context.output ++= name
     context.output ++= ");\n"
 
   /** Writes the C declaration of `t` to the output buffer. */
@@ -257,6 +257,11 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
         context.output ++= "ArtVariant "
         context.output ++= " "
         
+        //if is record
+        if n.tpe.isInstanceOf[Type.Record] then
+          context.output ++= ""
+          context.registerFree(transpiledReferenceTo(n.entityDeclared))
+          
         context.output ++= transpiledReferenceTo(n.entityDeclared)
         
         // Top-level bindings must have an initializer.
@@ -547,6 +552,12 @@ object CPrinter:
     /** The functions that must be emitted in the program. */
     def functionsToEmit: Set[alpine.ast.Function] = _functionsToEmit.toSet
 
+    /** The records that must be freed in the program. */
+    private var _recordsToFree = mutable.Set[String]()
+
+    /** The records that must be freed in the program. */
+    def recordsToFree: Set[String] = _recordsToFree.toSet
+
     /** The (partial) result of the transpilation. */
     private var _output = StringBuilder()
 
@@ -566,6 +577,10 @@ object CPrinter:
     /** Adds `t` to the set of types that are used by the transpiled program. */
     def registerUse(t: symbols.Type.Record): Unit =
       if t != symbols.Type.Unit then _typesToEmit.add(t)
+
+    /** Register record to free */
+    def registerFree(t: String): Unit =
+      _recordsToFree.add(t)
 
     /** Returns `action` applied on `this` where `output` has been exchanged with `o`. */
     def swappingOutputBuffer[R](o: StringBuilder)(action: Context => R): R =
