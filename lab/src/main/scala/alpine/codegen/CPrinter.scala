@@ -410,7 +410,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
       c.visit(this)
 
     context.output ++= "  " * context.indentation
-    context.output ++= "{art_panic()}\n"
+    context.output ++= "{art_panic();}\n"
 
     // Default case is optional, we could implement it later here.
 
@@ -423,7 +423,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     // We might need to delete the val from the binding like we did in ScalaPrinter.scala
     n.pattern.visit(this)
     context.output ++= ")) {"
-    context.output ++= ":\n"
+    context.output ++= "\n"
     context.indentation += 1
     context.output ++= "  " * context.indentation
     n.body.visit(this)
@@ -502,7 +502,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     unexpectedVisit(n)
 
   override def visitValuePattern(n: ast.ValuePattern)(using context: Context): Unit =
-    ???
+    n.value.visit(this)
 
     //TODO lots of fixing todo
   override def visitRecordPattern(n: ast.RecordPattern)(using context: Context): Unit =
@@ -521,7 +521,8 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= ")"
 
   override def visitWildcard(n: ast.Wildcard)(using context: Context): Unit =
-    ???
+    context.output ++= "(Artvariant) {.label = \"\", .num_fields = 0, .type = WILDCARD, .value = { .i = 0 }})"
+  
 
   override def visitError(n: ast.ErrorTree)(using context: Context): Unit =
     unexpectedVisit(n)
