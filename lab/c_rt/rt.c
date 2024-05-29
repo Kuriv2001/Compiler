@@ -19,17 +19,28 @@ int art_compare(ArtVariant a, ArtVariant b) {
     }
 
     switch (a.type) {
-        case INT:
-            return (b.num_fields <= 0) || (a.value.i == b.value.i);
+        // case INT:
+        //     return (b.num_fields <= 0) || (a.value.i == b.value.i);
+
+        // case FLOAT:
+        //     return (b.num_fields <= 0) || (a.value.f == b.value.f);
+
+        // case STRING:
+        //     return (b.num_fields <= 0) || (strcmp(a.value.s, b.value.s) == 0);
+
+        // case BOOL:
+        //     return (b.num_fields <= 0) || (a.value.b == b.value.b);
+         case INT:
+            return (a.value.i == b.value.i);
 
         case FLOAT:
-            return (b.num_fields <= 0) || (a.value.f == b.value.f);
+            return (a.value.f == b.value.f);
 
         case STRING:
-            return (b.num_fields <= 0) || (strcmp(a.value.s, b.value.s) == 0);
+            return (strcmp(a.value.s, b.value.s) == 0);
 
         case BOOL:
-            return (b.num_fields <= 0) || (a.value.b == b.value.b);
+            return (a.value.b == b.value.b);
 
         case RECORD: {
             // Compare the labels
@@ -122,7 +133,16 @@ ArtVariant art_iadd(ArtVariant a, ArtVariant b) {
     return result;
 }
 int art_isub(int a, int b) { return a - b; }
-int art_imul(int a, int b) { return a * b; }
+
+ArtVariant art_imul(ArtVariant a, ArtVariant b) {
+    ArtVariant art_iadd(ArtVariant a, ArtVariant b) { 
+    ArtVariant result;
+    result.type = INT;
+    result.value.i = a.value.i * b.value.i;
+    return result;
+}
+}
+
 int art_idiv(int a, int b) { return a / b; }
 int art_irem(int a, int b) { return a % b; }
 void art_exit_program(int a) { exit(a); }

@@ -40,7 +40,7 @@ void art_print(ArtVariant v);
 // Integer arithmetic operations
 ArtVariant art_iadd(ArtVariant a, ArtVariant b);
 int art_isub(int a, int b);
-int art_imul(int a, int b);
+ArtVariant art_imul(ArtVariant a, ArtVariant b);
 int art_idiv(int a, int b);
 int art_irem(int a, int b);
 
