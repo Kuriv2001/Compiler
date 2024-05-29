@@ -30,10 +30,10 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     syntax.declarations.foreach(_.visit(this))
     c.recordsToFree.foreach(freeRecord)
     c.output ++= "}\n\n"
-    c.functionsToEmit.foreach(emitFunctionDefinition)
+    c.functionsToEmit.foreach(emitFunctionInitialisation)
     val imports = "#include <stdio.h>\n#include <stdlib.h>\n#include \"lib.h\"\n\n"
-    val functionDefs = c.functionsToEmit.map(emitFunctionDeclaration).mkString("\n")
-    imports + functionDefs + c.typesToEmit.map(emitRecord).mkString("\n") + c.output.toString
+    val functionDeclaration = c.functionsToEmit.map(emitFunctionDeclaration).mkString("\n")
+    imports + functionDeclaration + c.typesToEmit.map(emitRecordFunction).mkString("\n") + c.output.toString
 
 
   /** creates function declaration */
@@ -54,7 +54,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     sb.toString()
     
   /** creates function init for the record */  
-  private def emitFunctionDefinition(t: alpine.ast.Function)(using context: Context): Unit =
+  private def emitFunctionInitialisation(t: alpine.ast.Function)(using context: Context): Unit =
     context.output ++= "  " * context.indentation
     context.output ++= transpiledType(symbols.Type.Arrow.from(t.tpe).get.output) //tu es la
     context.output ++= " "
@@ -86,7 +86,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.output ++= ");\n"
 
   /** Writes the C declaration of `t` to the output buffer. */
-  private def emitRecord(t: symbols.Type.Record)(using context: Context): String =
+  private def emitRecordFunction(t: symbols.Type.Record)(using context: Context): String =
     val sb = new StringBuilder
     sb ++= s"ArtVariant create_record_${discriminator(t)}("
     //Parameters: ArtVariant create_record_discrimRecord(ArtVariant field1, ArtVariant field2, ...)
