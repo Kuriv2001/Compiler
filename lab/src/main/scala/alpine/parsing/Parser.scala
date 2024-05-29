@@ -82,7 +82,7 @@ class Parser(val source: SourceFile):
 
         case _ =>
           recover(ExpectedTree("':' or '='", emptySiteAtLastBoundary), ErrorTree.apply)
-          Binding(i.value, None, None, letTok.site.extendedTo(i.site.end)) //TODO Antoine: False but what to return then?
+          Binding(i.value, None, None, letTok.site.extendedTo(i.site.end)) // TODO: False but what to return then?
     
     else
       peek match
@@ -95,6 +95,28 @@ class Parser(val source: SourceFile):
           Binding(i.value, None, None, letTok.site.extendedTo(i.site.end))
       
 
+  /** Parses and returns a method declaration. */
+  private[parsing] def method(): Method =
+    val fun = expect(K.Fun)
+    val receiverType = tpe()
+    val dot = expect(K.Dot)
+    val funIdentifier = functionIdentifier()
+    val parameters = valueParameterList()
+
+    val functionType = peek match
+      case Some(Token(K.Arrow, _)) =>
+        expect(K.Arrow)
+        Some(tpe())
+        // Need to check that function type has same type has receiver type
+      case _ =>
+        None
+
+    expect(K.LBrace)
+    val e = expression()
+    val rBrace = expect(K.RBrace)
+
+    Method(funIdentifier.toString(), Nil /* generic parameters can be done later for the project */,
+            Parameter(Some("self"), "receiver_type", Some(receiverType), fun.site), parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
     
 
   /** Parses and returns a function declaration. */
@@ -138,7 +160,7 @@ class Parser(val source: SourceFile):
   private[parsing] def parameter(): Declaration =
     peek match
       case Some(Token(K.Identifier, _)) => //<identifier> <identifier> [: <type>] // labeled or //<keyword> <identifier> [: <type>] // labeled by keyword
-            val ident_1 = identifier() //TODO how to handle keyword correctly??
+            val ident_1 = identifier()
             val ident_2 = identifier()
             peek match
               case Some(Token(K.Colon, _)) => 
@@ -160,8 +182,7 @@ class Parser(val source: SourceFile):
             Parameter(None, ident_exp.site.text.toString, None, underscore_exp.site.extendedToCover(ident_exp.site))
 
       case _ =>
-        //give error when binding with an initialiser
-        if peek.get.kind.isKeyword then //Bullshit or works?
+        if peek.get.kind.isKeyword then
           val ident_1 = take().get
           val ident_2 = identifier()
             peek match
@@ -186,7 +207,6 @@ class Parser(val source: SourceFile):
 
 
   /** Parses and returns a list of parameter declarations in angle brackets. */
-  //--- This is intentionally left in the handout /*+++ +++*/
   private def typeParameterList(): List[Parameter] =
     inAngles(() => commaSeparatedList(K.RAngle.matches, parameter))
       .collect({ case p: Parameter => p })

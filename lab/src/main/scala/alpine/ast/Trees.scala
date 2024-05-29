@@ -219,7 +219,7 @@ end TypeDeclaration
 final case class Method(
     identifier: String,
     genericParameters: List[Parameter],
-    receiver: Parameter, // The receiver parameter
+    receiver: Parameter,
     inputs: List[Parameter],
     output: Option[Type],
     body: Expression,
