@@ -432,7 +432,7 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     context.indentation += 1
     context.output ++= "  " * context.indentation
     n.body.visit(this)
-    context.output ++= "\n"
+    context.output ++= ";\n"
     context.output ++= "}\nelse "
     context.indentation -= 1
 
@@ -512,18 +512,26 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     //TODO lots of fixing todo
   override def visitRecordPattern(n: ast.RecordPattern)(using context: Context): Unit =
     context.registerUse(n.tpe.asInstanceOf[Type.Record])
-    context.output ++= transpiledType(n.tpe.asInstanceOf[Type.Record])
-
-    if(!n.fields.isEmpty) {
-      context.output.appendCommaSeparated(n.fields)((output, f) =>
-        
-        val before = context.output.lastIndexOf("val")
-        f.value.visit(this)
-        val after = context.output.lastIndexOf("val")
-
-        if (before != after) then context.output.delete(after, after+4))     
-    }
+    context.output ++= s"create_record_${discriminator(n.tpe)}("
+    var idxFields = 0
+    for field <- n.fields do
+      field.value.visit(this)
+      if idxFields < n.fields.size - 1 then
+        context.output ++= ", "
+      idxFields += 1
     context.output ++= ")"
+    // context.output ++= transpiledType(n.tpe.asInstanceOf[Type.Record])
+
+    // if(!n.fields.isEmpty) {
+    //   context.output.appendCommaSeparated(n.fields)((output, f) =>
+        
+    //     val before = context.output.lastIndexOf("val")
+    //     f.value.visit(this)
+    //     val after = context.output.lastIndexOf("val")
+
+    //     if (before != after) then context.output.delete(after, after+4))     
+    // }
+    // context.output ++= ")"
 
   override def visitWildcard(n: ast.Wildcard)(using context: Context): Unit =
     context.output ++= "(Artvariant) {.label = \"\", .num_fields = 0, .type = WILDCARD, .value = { .i = 0 }})"
