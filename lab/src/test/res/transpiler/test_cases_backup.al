@@ -76,6 +76,38 @@ let main = print(record.foo)
 11
 //END
 
+//BEGIN Narrowing conditionally should return a #none if not a subtype (2pts)
+let main = match ((5 @ Any) @? Float) {
+    case #some(let x) then print(x)
+    case #none then print("none")
+}
+//OUT
+none
+//END
+
+//BEGIN Narrowing conditionally should return a #some if a subtype (2pts)
+let main = match ((1 @ Any) @? Int) {
+    case #some(let x) then print(x)
+    case #none then print("none")
+}
+//OUT
+1
+//END
+
+//BEGIN Narrowing unconditionally should work with valid cast (2pts)
+let x = ((1 @ Any) @! Int)
+let main = print(x)
+//OUT
+1
+//END
+
+//BEGIN Narrowing unconditionally should panic with unvalid cast (2pts)
+let x = ((1 @ Any) @! Float)
+let main = print(x)
+//OUT
+panic
+//END
+
 //BEGIN Pattern matching with values (2pts)
 let status = match #a(1) {
     case (#a(2)) then 2
