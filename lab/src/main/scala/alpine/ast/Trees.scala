@@ -215,50 +215,11 @@ final case class TypeDeclaration(
 
 end TypeDeclaration
 
-/** A method declaration. */
-final case class Method(
-    identifier: String,
-    genericParameters: List[Parameter],
-    receiver: Parameter,
-    inputs: List[Parameter],
-    output: Option[Type],
-    body: Expression,
-    site: SourceSpan
-) extends Declaration:
-
-  /** Returns the result of calling the visitor method of `v` for `this`. */
-  def visit[A, B](v: TreeVisitor[A, B])(using a: A): B =
-    v.visitMethod(this)
-
-  /** Visits `this` and its children in pre-order, notifying `w` when a node is entered or left. */
-  def walk[W <: TreeWalker](w: W): Unit =
-    if w.enterMethod(this) then
-      walkChildren(w)
-      w.exitMethod(this)
-
-  /** Traverses `this`'s children' in pre-order, notifying `w` when entering or exiting a node. */
-  def walkChildren[W <: TreeWalker](w: W): Unit =
-    Tree.walkRoots(genericParameters, w)
-    receiver.walk(w)
-    Tree.walkRoots(inputs, w)
-    Tree.walkOption(output, w)
-    body.walk(w)
-
-  /** A source-level textual representation of this tree. */
-  override def unparsed: String =
-    val g = if genericParameters.isEmpty then "" else
-      "<" + genericParameters.map((p) => p.unparsed).mkString(", ") + ">"
-    val i = inputs.map((p) => p.unparsed).mkString(", ")
-    val s = output match
-      case Some(o) => s"${g}(${i}) -> ${o.unparsed}"
-      case _ => s"${g}(${i})"
-    s"fun ${identifier}${s} { ${body.unparsed} }"
-
-end Method
 
 /** A function declaration. */
 final case class Function(
     identifier: String,
+    receiverType: Option[Type],
     genericParameters: List[Parameter],
     inputs: List[Parameter],
     output: Option[Type],

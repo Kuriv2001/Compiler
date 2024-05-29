@@ -16,8 +16,6 @@ Declaration -> Binding | Function | TypeDeclaration
 Binding -> 'let' Identifier [':' Type] '=' Expression
 LetExpression -> Binding '{' Expression '}'
 
-Method -> fun Type '.' FunctionIdentifier '(' [ValueParameterList] ')' '->' Type '{' Expression '}'
-
 Function -> 'fun' FunctionIdentifier '(' [ValueParameterList] ')' ['->' Type] '{' Expression '}'
 TypeDeclaration -> 'type' Identifier '=' Type
 

@@ -67,9 +67,6 @@ final class Interpreter(
   def visitTypeDeclaration(n: ast.TypeDeclaration)(using context: Context): Value =
     unexpectedVisit(n)
 
-  def visitMethod(n: ast.Method)(using context: Context): Value =
-    unexpectedVisit(n)
-
   def visitFunction(n: ast.Function)(using context: Context): Value =
     unexpectedVisit(n)
 

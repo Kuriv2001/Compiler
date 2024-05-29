@@ -42,14 +42,6 @@ trait TreeWalker:
     exitAny(n)
 
   /** Called when `n` is about to be entered; returns `false` if traversal should skip `n`. */
-  def enterMethod(n: Method): Boolean =
-    enterAny(n)
-
-  /** Called when `n` is about to be left. */  
-  def exitMethod(n: Method): Unit =
-    exitAny(n)
-
-  /** Called when `n` is about to be entered; returns `false` if traversal should skip `n`. */
   def enterFunction(n: Function): Boolean =
     enterAny(n)
 

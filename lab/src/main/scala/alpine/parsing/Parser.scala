@@ -93,31 +93,7 @@ class Parser(val source: SourceFile):
 
         case _ =>
           Binding(i.value, None, None, letTok.site.extendedTo(i.site.end))
-      
 
-  /** Parses and returns a method declaration. */
-  private[parsing] def method(): Method =
-    val fun = expect(K.Fun)
-    val receiverType = tpe()
-    val dot = expect(K.Dot)
-    val funIdentifier = functionIdentifier()
-    val parameters = valueParameterList()
-
-    val functionType = peek match
-      case Some(Token(K.Arrow, _)) =>
-        expect(K.Arrow)
-        Some(tpe())
-        // Need to check that function type has same type has receiver type
-      case _ =>
-        None
-
-    expect(K.LBrace)
-    val e = expression()
-    val rBrace = expect(K.RBrace)
-
-    Method(funIdentifier.toString(), Nil /* generic parameters can be done later for the project */,
-            Parameter(Some("self"), "receiver_type", Some(receiverType), fun.site), parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
-    
 
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
@@ -136,7 +112,8 @@ class Parser(val source: SourceFile):
     val e = expression()
     val rBrace = expect(K.RBrace)
 
-    Function(funIdentifier.toString(), Nil /* generic parameters can be done later for the project */,
+    Function(funIdentifier.toString(), None /* TODO: Need to include the receiverType for methods and free functions */,
+            Nil /* generic parameters can be done later for the project */,
             parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
     
 

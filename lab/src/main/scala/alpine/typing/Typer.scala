@@ -90,7 +90,6 @@ final class Typer(
     })
     memoizedUncheckedType(d, (_) => t)
 
-  def visitMethod(d: ast.Method)(using context: Typer.Context): Type = ???
 
   def visitFunction(d: ast.Function)(using context: Typer.Context): Type =
     if !d.genericParameters.isEmpty then
