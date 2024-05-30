@@ -300,43 +300,53 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns a compound expression. */
   private[parsing] def compoundExpression(): Expression =
-    val pe = primaryExpression()
-
-    peek match
-      case Some(Token(K.Dot, _)) | Some(Token(K.LParen, _)) => ()
-      case _ => return pe
-
-    peek.get.kind match
-      case K.Dot =>
-        take()
-
+    def compoundExpression2(lhs: Expression): Expression =
+      if (noWhitespaceBeforeNextToken) then
         peek match
-          case Some(Token(K.Integer, _)) =>
-            val i = integerLiteral()
-            return Selection(pe, i, pe.site.extendedToCover(i.site))
+          case Some(Token(K.Dot, _)) =>
+            expect(K.Dot)
 
-          case Some(Token(K.Identifier, _)) =>
-            val i = identifier()
-            if (peek.get.kind == K.LParen) then
-              return Application(i, Labeled(None, pe, pe.site) :: parenthesizedLabeledList(primaryExpression), pe.site.extendedToCover(i.site))
-            return Selection(pe, i, pe.site.extendedToCover(i.site))
+            peek match
+              case Some(Token(K.Integer, _)) =>
+                val i = integerLiteral()
+                compoundExpression2(Selection(lhs, i, lhs.site.extendedToCover(i.site)))
 
-          case Some(t) if t.kind.isOperatorPart =>
-            operator() match
-              case i: Identifier => return Selection(pe, i, pe.site.extendedTo(i.site.end))
-              case _ => throw FatalError("expected identifier", emptySiteAtLastBoundary)
+              case Some(Token(K.Identifier, _)) => 
+                val i = identifier()
+
+                //Check for methods
+                if peek.get.kind == K.LParen then
+                  // 42.negate() -> Application(negate, Labeled(None, 42, 42.site) :: Nil, 42.site.extendedToCover(42.site)
+                  val e = Application(i, Labeled(None, lhs, lhs.site) :: parenthesizedLabeledList(primaryExpression), lhs.site.extendedToCover(i.site))
+                  compoundExpression2(e)
+                else
+                  val e = Selection(lhs, i, lhs.site.extendedToCover(i.site))
+                  compoundExpression2(e)
+
+              case Some(t) if t.kind.isOperatorPart =>
+                operator() match
+                  case i: Identifier => compoundExpression2(Selection(lhs, i, lhs.site.extendedTo(i.site.end)))
+                  case _ => throw FatalError("expected identifier", emptySiteAtLastBoundary)
+
+              case _ =>
+                recover(ExpectedTree("identifier or integer literal", emptySiteAtLastBoundary), ErrorTree.apply)
+
+          case Some(Token(K.LParen, _)) =>
+            val args = parenthesizedLabeledList(expression)
+            val site = args match
+              case Nil => lhs.site
+              case _ => lhs.site.extendedToCover(args.last.site)
+            
+            val e = Application(lhs, args, site)
+            compoundExpression2(e)
 
           case _ =>
-            recover(ExpectedTree("identifier or integer literal", emptySiteAtLastBoundary), ErrorTree.apply)
+            lhs
+                
+      else
+        lhs
 
-      case K.LParen =>
-        val args = parenthesizedLabeledList(() => expression())
-        return Application(pe, args, pe.site.extendedToCover(args.last.site))
-
-      case _ =>
-        throw FatalError("expected '.' or '('", emptySiteAtLastBoundary)
-
-    throw FatalError("unreachable", emptySiteAtLastBoundary)
+    compoundExpression2(primaryExpression())
 
 
   /** Parses and returns a term-level primary exression.
