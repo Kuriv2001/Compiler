@@ -11,6 +11,7 @@ import scala.collection.mutable
 import alpine.symbols.Type
 import alpine.symbols.Type.Bool
 import alpine.ast.Typecast
+import alpine.parsing.Token.Kind
 
 /** The transpilation of an Alpine program to Scala. */
 final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrinter.Context, Unit]:
@@ -25,6 +26,10 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     given c: Context = Context()
     syntax.declarations.foreach(_.visit(this))
     c.typesToEmit.map(emitRecord)
+    println("________________________________________________________________")
+    println("________________________________________________________________")
+
+    println(c.output.toString)
     c.output.toString
 
   /** Writes the Scala declaration of `t` in `context`. */
@@ -232,7 +237,7 @@ final class ScalaPrinter(syntax: TypedProgram) extends ast.TreeVisitor[ScalaPrin
     context.output ++= transpiledReferenceTo(n.entityDeclared)
     context.output ++= "("
     context.output.appendCommaSeparated(n.inputs) { (o, a) =>
-      o ++= a.identifier
+      o ++= transpiledReferenceTo(a.entityDeclared)
       o ++= ": "
       o ++= transpiledType(a.tpe)
     }

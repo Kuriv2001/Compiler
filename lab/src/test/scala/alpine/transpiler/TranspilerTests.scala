@@ -9,6 +9,9 @@ class TranspilerTests extends munit.FunSuite:
   
   val inputFileAlpineTests = "./src/test/res/methods/test_methods.al"
 
+  val inputFileAlpineTests2 = "./src/test/res/transpiler/test_cases.al"
+
+
   /**
     * Parses the given file and run the obtained test cases
     *
@@ -45,3 +48,4 @@ class TranspilerTests extends munit.FunSuite:
     runner.foreach(_.delete)
 
   runTestsFromFile(inputFileAlpineTests)
+  //runTestsFromFile(inputFileAlpineTests2)

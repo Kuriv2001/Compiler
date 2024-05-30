@@ -82,7 +82,7 @@ class Parser(val source: SourceFile):
 
         case _ =>
           recover(ExpectedTree("':' or '='", emptySiteAtLastBoundary), ErrorTree.apply)
-          Binding(i.value, None, None, letTok.site.extendedTo(i.site.end)) // TODO: False but what to return then?
+          Binding(i.value, None, None, letTok.site.extendedTo(i.site.end)) //TODO Antoine: False but what to return then?
     
     else
       peek match
@@ -93,59 +93,40 @@ class Parser(val source: SourceFile):
 
         case _ =>
           Binding(i.value, None, None, letTok.site.extendedTo(i.site.end))
-
+          
 
   /** Parses and returns a function declaration. */
   private[parsing] def function(): Function =
     val fun = expect(K.Fun)
-
     val s = snapshot()
-
-    try {
-      // In case of a method declaration
-      val receiverType = tpe()
+    var methods = false
+    val t = tpe()
+    if peek.get.kind != K.Dot then
+      restore(s)
+    else
+      methods = true
       expect(K.Dot)
 
-      val funIdentifier = functionIdentifier()
-      val parameters = valueParameterList()
+    val funIdentifier = functionIdentifier()
+    var parameters = valueParameterList()
 
-      val functionType = peek match
-        case Some(Token(K.Arrow, _)) =>
-          expect(K.Arrow)
-          Some(tpe())
-        case _ =>
-          None
+    if methods then
+      parameters = Parameter(None, "self", Some(t), emptySiteAtLastBoundary) :: parameters
 
-      expect(K.LBrace)
-      val e = expression()
-      val rBrace = expect(K.RBrace)
-
-      Function(funIdentifier.toString(), Some(receiverType),
-              Nil /* generic parameters can be done later for the project */,
-              parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
-    } catch {
+    val functionType = peek match
+      case Some(Token(K.Arrow, _)) =>
+        expect(K.Arrow)
+        Some(tpe())
       case _ =>
-        restore(s)
+        None
 
-        val funIdentifier = functionIdentifier()
-        val parameters = valueParameterList()
+    expect(K.LBrace)
+    val e = expression()
+    val rBrace = expect(K.RBrace)
 
-        val functionType = peek match
-          case Some(Token(K.Arrow, _)) =>
-            expect(K.Arrow)
-            Some(tpe())
-          case _ =>
-            None
-
-        expect(K.LBrace)
-        val e = expression()
-        val rBrace = expect(K.RBrace)
-
-        Function(funIdentifier.toString(), None,
-                Nil /* generic parameters can be done later for the project */,
-                parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
-    }
-
+    Function(funIdentifier.toString(), Nil /* generic parameters can be done later for the project */,
+            parameters, functionType, e, fun.site.extendedToCover(rBrace.site))
+    
 
   /** Parses and returns the identifier of a function. */
   private def functionIdentifier(): String =
@@ -167,15 +148,15 @@ class Parser(val source: SourceFile):
   private[parsing] def parameter(): Declaration =
     peek match
       case Some(Token(K.Identifier, _)) => //<identifier> <identifier> [: <type>] // labeled or //<keyword> <identifier> [: <type>] // labeled by keyword
-            val ident_1 = identifier()
-            val ident_2 = identifier()
-            peek match
-              case Some(Token(K.Colon, _)) => 
-                val colon_exp = expect(K.Colon)
-                val type_exp = tpe()
-                Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
-              case _ =>
-                Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, None, ident_1.site.extendedToCover(ident_2.site))          
+        val ident_1 = identifier() //TODO how to handle keyword correctly??
+        val ident_2 = identifier()
+        peek match
+          case Some(Token(K.Colon, _)) => 
+            val colon_exp = expect(K.Colon)
+            val type_exp = tpe()
+            Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, Some(type_exp), ident_1.site.extendedToCover(type_exp.site))
+          case _ =>
+            Parameter(Some(ident_1.site.text.toString), ident_2.site.text.toString, None, ident_1.site.extendedToCover(ident_2.site))          
 
       case Some(Token(K.Underscore, _)) => //'_' <identifier> [: <type>] // unlabeled
         val underscore_exp = expect(K.Underscore)
@@ -189,7 +170,8 @@ class Parser(val source: SourceFile):
             Parameter(None, ident_exp.site.text.toString, None, underscore_exp.site.extendedToCover(ident_exp.site))
 
       case _ =>
-        if peek.get.kind.isKeyword then
+        //give error when binding with an initialiser
+        if peek.get.kind.isKeyword then //Bullshit or works?
           val ident_1 = take().get
           val ident_2 = identifier()
             peek match
@@ -214,6 +196,7 @@ class Parser(val source: SourceFile):
 
 
   /** Parses and returns a list of parameter declarations in angle brackets. */
+  //--- This is intentionally left in the handout /*+++ +++*/
   private def typeParameterList(): List[Parameter] =
     inAngles(() => commaSeparatedList(K.RAngle.matches, parameter))
       .collect({ case p: Parameter => p })
@@ -231,7 +214,7 @@ class Parser(val source: SourceFile):
       val s = snapshot()
 
       var (op, opSite) = peek match
-        case Some(token) if token.kind.isOperatorPart =>
+        case Some(Token(K.Operator, _)) | Some(Token(K.Eq, _)) | Some(Token(K.LAngle, _)) | Some(Token(K.RAngle, _)) =>
           operatorIdentifier()
         case _ => (None, emptySiteAtLastBoundary)
 
@@ -327,7 +310,6 @@ class Parser(val source: SourceFile):
       case K.Dot =>
         take()
 
-        // For methods, need to also check if we have a left parenthesis after an identifier because it would mean that we are calling a function
         peek match
           case Some(Token(K.Integer, _)) =>
             val i = integerLiteral()
@@ -335,20 +317,9 @@ class Parser(val source: SourceFile):
 
           case Some(Token(K.Identifier, _)) =>
             val i = identifier()
-
-            // If we have a left parenthesis, it means that we are calling a function
-            val s = snapshot()
-
-            try {
-              val args = parenthesizedLabeledList(() => pe)
-              return Application(pe, args, pe.site.extendedToCover(args.last.site))
-
-            } catch {
-              case _ =>
-                restore(s)
-
-                return Selection(pe, i, pe.site.extendedToCover(i.site))
-            }
+            if (peek.get.kind == K.LParen) then
+              return Application(i, Labeled(None, pe, pe.site) :: parenthesizedLabeledList(primaryExpression), pe.site.extendedToCover(i.site))
+            return Selection(pe, i, pe.site.extendedToCover(i.site))
 
           case Some(t) if t.kind.isOperatorPart =>
             operator() match
@@ -360,10 +331,7 @@ class Parser(val source: SourceFile):
 
       case K.LParen =>
         val args = parenthesizedLabeledList(() => expression())
-        if args.isEmpty then
-          return Application(pe, List(), pe.site.extendedToCover(pe.site))
-        else
-          return Application(pe, args, pe.site.extendedToCover(args.last.site))
+        return Application(pe, args, pe.site.extendedToCover(args.last.site))
 
       case _ =>
         throw FatalError("expected '.' or '('", emptySiteAtLastBoundary)
@@ -714,8 +682,7 @@ class Parser(val source: SourceFile):
           case Some(Token(K.Arrow, _)) =>
             expect(K.Arrow)
             val returnType = tpe()
-
-            Arrow(types, returnType, left.site.extendedToCover(returnType.site))
+            Arrow(types, returnType, types.head.site.extendedToCover(returnType.site))
           case _ =>
             recover(ExpectedTree("arrow or ')'", emptySiteAtLastBoundary), ErrorTree.apply)
     }
@@ -746,7 +713,8 @@ class Parser(val source: SourceFile):
   /** Parses and returns the fields of a record pattern. */
   private def recordPatternFields(): List[Labeled[Pattern]] =
     commaSeparatedList(K.RParen.matches, () => labeled(() => pattern()))
-  
+
+    
 
   /** Parses and returns a binding pattern. */
   private def bindingPattern(): Binding =
