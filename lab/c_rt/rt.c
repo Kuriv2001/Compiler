@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "rt.h"
+#include "lib.h"
 
 void art_panic() { 
     printf("panic\n"); 
@@ -88,6 +88,7 @@ void add_field_to_record(ArtVariant *record, size_t index, ArtVariant value) {
     strcpy(record->value.recordFields[index].label, value.label);
     record->value.recordFields[index].type = value.type;
     record->value.recordFields[index].value = value.value;
+    record->value.recordFields[index].num_fields = value.num_fields;
 }
 
 void free_record(ArtVariant *record) {
