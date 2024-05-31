@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lib.h"
+#include "rt.h"
 
 void art_panic() { 
     printf("panic\n"); 
