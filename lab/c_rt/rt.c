@@ -141,7 +141,6 @@ ArtVariant art_imul(ArtVariant a, ArtVariant b) {
     return result;
 }
 
-
 int art_idiv(int a, int b) { return a / b; }
 int art_irem(int a, int b) { return a % b; }
 void art_exit_program(int a) { exit(a); }
