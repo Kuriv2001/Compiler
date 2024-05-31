@@ -32,8 +32,9 @@ final class CPrinter(syntax: TypedProgram) extends ast.TreeVisitor[CPrinter.Cont
     c.output ++= "}\n\n"
     c.functionsToEmit.foreach(emitFunctionInitialisation)
     val imports = "#include <stdio.h>\n#include <stdlib.h>\n#include \"lib.h\"\n\n"
-    val functionDeclaration = c.functionsToEmit.map(emitFunctionDeclaration).mkString("\n")
-    imports + functionDeclaration + c.typesToEmit.map(emitRecordFunction).mkString("\n") + c.output.toString
+    val functionDeclarations = c.functionsToEmit.map(emitFunctionDeclaration).mkString("\n")
+    val recordCreateFunctions = c.typesToEmit.map(emitRecordFunction).mkString("\n")
+    imports + functionDeclarations + recordCreateFunctions + c.output.toString
 
 
   /** creates function declaration */

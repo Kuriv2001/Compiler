@@ -135,13 +135,12 @@ ArtVariant art_iadd(ArtVariant a, ArtVariant b) {
 int art_isub(int a, int b) { return a - b; }
 
 ArtVariant art_imul(ArtVariant a, ArtVariant b) {
-    ArtVariant art_iadd(ArtVariant a, ArtVariant b) { 
     ArtVariant result;
     result.type = INT;
     result.value.i = a.value.i * b.value.i;
     return result;
 }
-}
+
 
 int art_idiv(int a, int b) { return a / b; }
 int art_irem(int a, int b) { return a % b; }
